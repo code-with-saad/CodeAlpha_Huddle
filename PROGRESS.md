@@ -4,7 +4,7 @@ CodeAlpha Full Stack Development internship, Task 3 (collaborative project manag
 
 | Phase | Scope | Status |
 |---|---|---|
-| 0 | Scaffolding, .gitignore, Atlas connection (`huddle_db`), design tokens, responsive shell, first deploy | In progress: scaffold, tokens and shell done; Atlas check and deploy need your accounts |
+| 0 | Scaffolding, .gitignore, Atlas connection (`huddle_db`), design tokens, responsive shell, first deploy | Done except the first Vercel deploy (owner creates the projects; see below) |
 | 1 | Auth and profile | Not started |
 | 2 | Projects, membership, invites, roles and permissions | Not started |
 | 3 | Boards, columns, cards, drag and drop (with mobile Move-to menu) | Not started |
@@ -33,4 +33,5 @@ Responsive checks at 375px, 768px and 1280px+ happen inside each phase, not at t
 - Vite + React client, tokens for light and dark as CSS variables, responsive shell (bottom nav under 768px, icon rail from 768px, labelled sidebar from 1024px), theme switch (system, light, dark) applied before first paint.
 - Client `vercel.json` has a strict CSP already allowing Cloudinary and Ably.
 - Verified in headless Chrome: production build passes; shell at 375 (iframe), 768 and 1280 in light and dark.
-- Not yet verified: live Atlas connection and both Vercel deploys (need your URI and accounts).
+- Verified: live Atlas connection reports database `huddle_db` (`/api/health/db`). Reuses the Circl cluster with its own database.
+- Not yet done: the two Vercel deploys and GitHub push. The owner will create the repo and projects later; Phase deploy steps are deferred until then.
