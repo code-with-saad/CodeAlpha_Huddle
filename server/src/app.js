@@ -4,6 +4,8 @@ import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import mongoose from 'mongoose';
 import { connectDB } from './config/db.js';
+import authRoutes from './routes/auth.js';
+import uploadRoutes from './routes/uploads.js';
 
 // Refuse to run with a missing or weak signing secret: every token depends on it.
 if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) {
@@ -40,6 +42,9 @@ app.use(async (_req, _res, next) => {
 
 // Reports the live database name so the deployed setup can be checked.
 app.get('/api/health/db', (_req, res) => res.json({ ok: true, database: mongoose.connection.name }));
+
+app.use('/api/auth', authRoutes);
+app.use('/api/uploads', uploadRoutes);
 
 app.use((_req, res) => res.status(404).json({ message: 'Not found' }));
 
