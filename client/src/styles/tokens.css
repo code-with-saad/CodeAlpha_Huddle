@@ -1,0 +1,136 @@
+/* Design tokens. Components read these variables only; no hex values live anywhere else. */
+
+:root {
+  color-scheme: light;
+
+  /* Type */
+  --font-ui: 'IBM Plex Sans', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+  --text-xs: 0.75rem;
+  --text-sm: 0.8125rem;
+  --text-md: 0.9375rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.5rem;
+  --leading-tight: 1.25;
+  --leading-body: 1.5;
+
+  /* Spacing, 4px base */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+
+  /* Radius, one reason each */
+  --radius-chip: 4px; /* checkboxes, small chips */
+  --radius-control: 6px; /* inputs and buttons */
+  --radius-card: 8px; /* task cards */
+  --radius-panel: 10px; /* columns and panels */
+  --radius-modal: 12px; /* modals, command palette */
+  --radius-pill: 999px; /* avatars, label and priority pills */
+
+  /* Layout */
+  --sidebar-w: 232px;
+  --rail-w: 56px;
+  --topbar-h: 52px;
+  --bottomnav-h: 56px;
+  --column-w: 296px;
+
+  /* Light surfaces (warm tinted neutrals) */
+  --canvas: #f1eee7;
+  --surface: #f7f5ef;
+  --raised: #fcfbf8;
+  --border: #dad5c9; /* decorative dividers */
+  --border-control: #8c8676; /* 3:1 or better against every surface, for inputs and buttons */
+  --border-strong: #c3bdae;
+
+  --text: #1e2320;
+  --text-muted: #5c625d;
+
+  --accent: #0b6580;
+  --accent-hover: #084f64;
+  --accent-subtle: #dfecf0;
+  --on-accent: #ffffff;
+
+  --success: #1f6e43;
+  --warning: #875a0c;
+  --danger: #b3382c;
+  --success-subtle: #e0efe5;
+  --warning-subtle: #f4e9d2;
+  --danger-subtle: #f6e0dc;
+
+  --focus-ring: var(--accent);
+
+  /* Elevation: border plus a soft two-layer shadow */
+  --shadow-1: 0 1px 1px rgb(30 35 32 / 0.06), 0 1px 3px rgb(30 35 32 / 0.06);
+  --shadow-2: 0 2px 4px rgb(30 35 32 / 0.08), 0 8px 20px rgb(30 35 32 / 0.1);
+  --shadow-3: 0 4px 8px rgb(30 35 32 / 0.1), 0 20px 48px rgb(30 35 32 / 0.18);
+  --scrim: rgb(30 35 32 / 0.45);
+}
+
+/* Dark is its own design: warm charcoal, a lighter accent, borders carry hierarchy instead of shadow. */
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  --canvas: #151617;
+  --surface: #1c1d1f;
+  --raised: #242628;
+  --border: #33363a;
+  --border-control: #7a7e84;
+  --border-strong: #464a4f;
+
+  --text: #e6e4de;
+  --text-muted: #9ea29d;
+
+  --accent: #5db4d2;
+  --accent-hover: #7cc6e0;
+  --accent-subtle: #1b2f37;
+  --on-accent: #0e1a1f;
+
+  --success: #5db582;
+  --warning: #d9a24a;
+  --danger: #e27a6e;
+  --success-subtle: #1c2e24;
+  --warning-subtle: #33291a;
+  --danger-subtle: #35201d;
+
+  --shadow-1: 0 0 0 1px rgb(0 0 0 / 0.25);
+  --shadow-2: 0 4px 16px rgb(0 0 0 / 0.5);
+  --shadow-3: 0 12px 40px rgb(0 0 0 / 0.65);
+  --scrim: rgb(0 0 0 / 0.6);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']):not([data-theme='dark']) {
+    color-scheme: dark;
+
+    --canvas: #151617;
+    --surface: #1c1d1f;
+    --raised: #242628;
+    --border: #33363a;
+    --border-control: #7a7e84;
+    --border-strong: #464a4f;
+
+    --text: #e6e4de;
+    --text-muted: #9ea29d;
+
+    --accent: #5db4d2;
+    --accent-hover: #7cc6e0;
+    --accent-subtle: #1b2f37;
+    --on-accent: #0e1a1f;
+
+    --success: #5db582;
+    --warning: #d9a24a;
+    --danger: #e27a6e;
+    --success-subtle: #1c2e24;
+    --warning-subtle: #33291a;
+    --danger-subtle: #35201d;
+
+    --shadow-1: 0 0 0 1px rgb(0 0 0 / 0.25);
+    --shadow-2: 0 4px 16px rgb(0 0 0 / 0.5);
+    --shadow-3: 0 12px 40px rgb(0 0 0 / 0.65);
+    --scrim: rgb(0 0 0 / 0.6);
+  }
+}
