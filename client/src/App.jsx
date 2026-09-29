@@ -1,5 +1,8 @@
 import { Link, Route, Routes } from 'react-router-dom';
 import Shell from './components/Shell.jsx';
+import RequireAuth from './components/RequireAuth.jsx';
+import AuthPage from './pages/AuthPage.jsx';
+import ProfilePage from './pages/ProfilePage.jsx';
 
 function Stub({ title, children }) {
   return (
@@ -15,10 +18,18 @@ function Stub({ title, children }) {
 export default function App() {
   return (
     <Routes>
-      <Route element={<Shell />}>
+      <Route path="login" element={<AuthPage mode="login" />} />
+      <Route path="register" element={<AuthPage mode="register" />} />
+      <Route
+        element={
+          <RequireAuth>
+            <Shell />
+          </RequireAuth>
+        }
+      >
         <Route index element={<Stub title="Projects">No projects yet. Project creation arrives in a later phase.</Stub>} />
         <Route path="notifications" element={<Stub title="Notifications">Nothing here yet.</Stub>} />
-        <Route path="profile" element={<Stub title="Profile">Profile settings arrive with sign in.</Stub>} />
+        <Route path="profile" element={<ProfilePage />} />
         <Route
           path="*"
           element={

@@ -1,0 +1,75 @@
+.auth {
+  min-height: 100dvh;
+  display: grid;
+  place-items: start center;
+  padding: var(--space-8) var(--space-4);
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 400px;
+  padding: var(--space-6);
+  background: var(--raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-panel);
+  box-shadow: var(--shadow-1);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.auth-wordmark {
+  align-self: flex-start;
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.field-label {
+  font-size: var(--text-sm);
+  font-weight: 500;
+}
+.field-hint {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+.field-error {
+  font-size: var(--text-sm);
+  color: var(--danger);
+}
+.input[aria-invalid='true'] {
+  border-color: var(--danger);
+}
+.form-error {
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-control);
+  background: var(--danger-subtle);
+  color: var(--danger);
+  font-size: var(--text-sm);
+}
+
+.auth-legal,
+.auth-switch {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+.auth-legal a,
+.auth-switch a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+@media (min-width: 768px) {
+  .auth {
+    place-items: center;
+  }
+}

@@ -5,11 +5,16 @@ import './styles/tokens.css';
 import './styles/base.css';
 import './styles/shell.css';
 import App from './App.jsx';
+import Toaster from './components/Toaster.jsx';
+import { AuthProvider } from './lib/auth.jsx';
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <BrowserRouter>
-      <App />
+      <AuthProvider>
+        <App />
+        <Toaster />
+      </AuthProvider>
     </BrowserRouter>
   </StrictMode>
 );
