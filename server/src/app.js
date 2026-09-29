@@ -6,6 +6,8 @@ import mongoose from 'mongoose';
 import { connectDB } from './config/db.js';
 import authRoutes from './routes/auth.js';
 import uploadRoutes from './routes/uploads.js';
+import projectRoutes from './routes/projects.js';
+import inviteRoutes from './routes/invites.js';
 
 // Refuse to run with a missing or weak signing secret: every token depends on it.
 if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) {
@@ -45,6 +47,8 @@ app.get('/api/health/db', (_req, res) => res.json({ ok: true, database: mongoose
 
 app.use('/api/auth', authRoutes);
 app.use('/api/uploads', uploadRoutes);
+app.use('/api/projects', projectRoutes);
+app.use('/api', inviteRoutes);
 
 app.use((_req, res) => res.status(404).json({ message: 'Not found' }));
 
