@@ -38,7 +38,10 @@ export default function Shell() {
       </header>
 
       <nav className="sidebar" aria-label="Main">
-        <span className="wordmark">Huddle</span>
+        <span className="wordmark" aria-label="Huddle">
+          <span aria-hidden="true">H</span>
+          <span className="label" aria-hidden="true">uddle</span>
+        </span>
         <Links size={18} />
         <div className="sidebar-foot">
           <button type="button" className="theme-btn" onClick={cycle} aria-label={`Theme: ${theme}. Change theme`}>

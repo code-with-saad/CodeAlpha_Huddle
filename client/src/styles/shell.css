@@ -130,8 +130,9 @@
     border-right: 1px solid var(--border);
   }
   .sidebar .wordmark {
-    padding: var(--space-2) var(--space-2) var(--space-4);
-    font-size: var(--text-md);
+    padding: var(--space-2) 0 var(--space-4);
+    text-align: center;
+    font-size: var(--text-lg);
   }
   .sidebar .navlink,
   .sidebar .theme-btn {
@@ -169,6 +170,7 @@
     display: inline;
   }
   .sidebar .wordmark {
-    font-size: var(--text-lg);
+    padding-left: var(--space-3);
+    text-align: left;
   }
 }
