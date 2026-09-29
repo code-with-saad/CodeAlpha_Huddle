@@ -6,7 +6,7 @@ CodeAlpha Full Stack Development internship, Task 3 (collaborative project manag
 |---|---|---|
 | 0 | Scaffolding, .gitignore, Atlas connection (`huddle_db`), design tokens, responsive shell, first deploy | Done except the first Vercel deploy (owner creates the projects; see below) |
 | 1 | Auth and profile | Done, verified in browser; Terms and Privacy links point at pages that arrive in Phase 8 |
-| 2 | Projects, membership, invites, roles and permissions | Not started |
+| 2 | Projects, membership, invites, roles and permissions | Done, verified in browser |
 | 3 | Boards, columns, cards, drag and drop (with mobile Move-to menu) | Not started |
 | 4 | Card detail: description, assignees, labels, priority, due date, checklists, attachments, comments, mentions | Not started |
 | 5 | Realtime layer (Ably): token endpoint, live board sync, presence, notification center, watchers | Not started |
@@ -44,3 +44,13 @@ Responsive checks at 375px, 768px and 1280px+ happen inside each phase, not at t
 - Verified against live Atlas via API: register, duplicate, validation, operator-injection body, wrong password, login, `/me` with and without token, profile patch, foreign avatar URL rejected, upload signature (secret not exposed), password change invalidates the old token.
 - Verified in headless Chrome at 375, 768 and 1280 (light and dark screenshots): 38 of 38 checks (redirects, field errors, register, profile save and persist, logout, protected redirect, wrong password message, no horizontal overflow). Real avatar upload to Cloudinary at 1280 confirmed under `huddle/avatars`. Test users and uploaded test images were deleted afterwards.
 - Known gaps: `/terms` and `/privacy` return the 404 page until Phase 8. No favicon yet (one harmless 404 in the console). Not tested on a real phone or in Safari or Firefox.
+
+## Phase 2 log
+- Server: Project model (members embedded with a role, soft archive), Invite model (direct invitations and shareable links in one collection). Roles are Owner, Admin, Member, Viewer. Every check runs on the server through `loadProject` and `requireRole`; non-members get 404 so project ids cannot be probed.
+- Rules: only the owner can archive, restore, transfer ownership or make admins. Admins manage members and viewers, invite as member or viewer, edit project details and revoke invites. Members and viewers can only read the member list and leave. Nobody can be made owner except through a transfer, and the owner cannot leave. Archived projects are read-only (409 on writes) until restored.
+- Invites: search by username prefix or exact email (never returns emails). Inviting by email or username needs an existing account and creates a pending invitation the person accepts or declines on their Projects page; no email is sent. Unknown emails get a message pointing to invite links. Links grant Viewer (default) or Member, expire in 1, 7 or 30 days or never, count uses, and can be revoked. A link never changes the role of someone already in. Joining is atomic so double clicks cannot create duplicate members.
+- Client: Projects page (list, invitations with accept and decline, new project dialog), project layout with Board and Members tabs, Members page (role select, remove, make owner, leave, details, invite by search, pending invitations, link creation with copy and revoke, archive and restore), join page for links (signed-out visitors go to login and come back). Native `<dialog>` for modals and in-app confirmations.
+- Bug found and fixed in the browser test: the native dialog focused the close button instead of Cancel in confirmations. Focus now moves to the element marked `data-autofocus`.
+- Express 5 does not allow regex parameters in route paths, so archive/restore and accept/decline are separate routes.
+- Verified via API against live Atlas: 82 of 82 checks (full role matrix, invite and link lifecycle, ownership transfer, archive and restore, bad ids and injection). Verified in headless Chrome at 375, 768 and 1280 with three real users in separate sessions: 93 of 93 checks, no console errors, no horizontal overflow, light and dark screenshots. Test users, projects and invites were deleted afterwards.
+- Not done or not tested: invite notifications arrive with the notification center in Phase 5 (for now invitations show on the Projects page only). No live updates yet, so a role change shows after a reload until Phase 5. The Board tab is a placeholder until Phase 3. Real phone not tested.

@@ -3,6 +3,10 @@ import Shell from './components/Shell.jsx';
 import RequireAuth from './components/RequireAuth.jsx';
 import AuthPage from './pages/AuthPage.jsx';
 import ProfilePage from './pages/ProfilePage.jsx';
+import ProjectsPage from './pages/ProjectsPage.jsx';
+import ProjectLayout from './pages/ProjectLayout.jsx';
+import MembersPage from './pages/MembersPage.jsx';
+import JoinPage from './pages/JoinPage.jsx';
 
 function Stub({ title, children }) {
   return (
@@ -21,13 +25,25 @@ export default function App() {
       <Route path="login" element={<AuthPage mode="login" />} />
       <Route path="register" element={<AuthPage mode="register" />} />
       <Route
+        path="join/:token"
+        element={
+          <RequireAuth>
+            <JoinPage />
+          </RequireAuth>
+        }
+      />
+      <Route
         element={
           <RequireAuth>
             <Shell />
           </RequireAuth>
         }
       >
-        <Route index element={<Stub title="Projects">No projects yet. Project creation arrives in a later phase.</Stub>} />
+        <Route index element={<ProjectsPage />} />
+        <Route path="p/:id" element={<ProjectLayout />}>
+          <Route index element={<div className="empty">The board arrives in the next phase.</div>} />
+          <Route path="members" element={<MembersPage />} />
+        </Route>
         <Route path="notifications" element={<Stub title="Notifications">Nothing here yet.</Stub>} />
         <Route path="profile" element={<ProfilePage />} />
         <Route

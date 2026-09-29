@@ -235,3 +235,19 @@ button {
     width: 360px;
   }
 }
+
+.inline-link {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.title-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  min-width: 0;
+}
+.title-row h1 {
+  overflow-wrap: anywhere;
+}

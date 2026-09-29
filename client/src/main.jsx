@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router-dom';
 import './styles/tokens.css';
 import './styles/base.css';
 import './styles/shell.css';
+import './styles/ui.css';
 import App from './App.jsx';
 import Toaster from './components/Toaster.jsx';
 import { AuthProvider } from './lib/auth.jsx';
