@@ -7,6 +7,7 @@ import ProjectsPage from './pages/ProjectsPage.jsx';
 import ProjectLayout from './pages/ProjectLayout.jsx';
 import MembersPage from './pages/MembersPage.jsx';
 import JoinPage from './pages/JoinPage.jsx';
+import BoardPage from './pages/board/BoardPage.jsx';
 
 function Stub({ title, children }) {
   return (
@@ -41,7 +42,7 @@ export default function App() {
       >
         <Route index element={<ProjectsPage />} />
         <Route path="p/:id" element={<ProjectLayout />}>
-          <Route index element={<div className="empty">The board arrives in the next phase.</div>} />
+          <Route index element={<BoardPage />} />
           <Route path="members" element={<MembersPage />} />
         </Route>
         <Route path="notifications" element={<Stub title="Notifications">Nothing here yet.</Stub>} />
