@@ -41,6 +41,8 @@ const cardSchema = new mongoose.Schema(
     checklist: { type: [checklistItem], default: [] },
     attachments: { type: [attachment], default: [] },
     commentCount: { type: Number, default: 0 },
+    // Set when the card enters a column that counts as done, cleared when it leaves. Feeds the dashboard.
+    completedAt: { type: Date, default: null },
     // People following the card: they get notified about comments. Creator, assignees, commenters and mentioned people join automatically.
     watchers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
 

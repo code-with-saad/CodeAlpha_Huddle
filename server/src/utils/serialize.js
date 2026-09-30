@@ -7,6 +7,8 @@ export function serializeCard(c) {
     title: c.title,
     position: c.position,
     createdAt: c.createdAt,
+    done: !!c.completedAt,
+    completedAt: c.completedAt ? c.completedAt.toISOString() : null,
     priority: c.priority,
     dueDate: c.dueDate ? c.dueDate.toISOString().slice(0, 10) : null,
     assignees: (c.assignees || []).map(String),

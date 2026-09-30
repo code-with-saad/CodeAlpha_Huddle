@@ -19,10 +19,10 @@ const reload = (req) => emitProject(req.project._id, 'board.reload', {}, req.use
 export const DEFAULT_COLUMNS = ['To Do', 'In Progress', 'Done'];
 
 export function createDefaultColumns(projectId) {
-  return Column.insertMany(DEFAULT_COLUMNS.map((name, i) => ({ project: projectId, name, position: STEP * (i + 1) })));
+  return Column.insertMany(DEFAULT_COLUMNS.map((name, i) => ({ project: projectId, name, position: STEP * (i + 1), isDone: name === 'Done' })));
 }
 
-const serializeColumn = (c) => ({ id: c._id, name: c.name, position: c.position });
+const serializeColumn = (c) => ({ id: c._id, name: c.name, position: c.position, isDone: !!c.isDone });
 
 export async function getBoard(req, res) {
   const [columns, cards, labels] = await Promise.all([
@@ -78,6 +78,12 @@ export async function updateColumn(req, res) {
   const column = await findColumn(req, res, req.params.columnId);
   if (!column) return;
   let renamedFrom = null;
+  let doneChanged = null;
+  if (req.body.isDone !== undefined) {
+    if (typeof req.body.isDone !== 'boolean') return res.status(400).json({ message: 'isDone must be true or false' });
+    if (req.body.isDone !== column.isDone) doneChanged = req.body.isDone;
+    column.isDone = req.body.isDone;
+  }
   if (req.body.name !== undefined) {
     const name = str(req.body.name);
     if (!validName(res, name)) return;
@@ -90,6 +96,9 @@ export async function updateColumn(req, res) {
     column.position = await placeAt(Column, { project: req.project._id, archivedAt: null }, column._id, index);
   }
   await column.save();
+  // Changing what counts as done completes or reopens the tasks already in the column.
+  if (doneChanged === true) await Card.updateMany({ column: column._id, archivedAt: null, completedAt: null }, { completedAt: new Date() });
+  if (doneChanged === false) await Card.updateMany({ column: column._id, archivedAt: null }, { completedAt: null });
   if (renamedFrom) await logActivity({ project: req.project, actor: req.user, type: 'column.renamed', data: { from: renamedFrom, to: column.name } });
   await reload(req);
   res.json({ column: serializeColumn(column) });
@@ -113,6 +122,9 @@ export async function deleteColumn(req, res) {
       const cards = await Card.find(cardFilter).sort({ position: 1 }).select('_id');
       const base = await endPosition(Card, { column: target._id, archivedAt: null });
       await Card.bulkWrite(cards.map((c, k) => ({ updateOne: { filter: { _id: c._id }, update: { column: target._id, position: base + STEP * k } } })));
+      const moved = cards.map((c) => c._id);
+      if (target.isDone) await Card.updateMany({ _id: { $in: moved }, completedAt: null }, { completedAt: new Date() });
+      else await Card.updateMany({ _id: { $in: moved } }, { completedAt: null });
     } else if (req.query.archiveCards === '1') {
       await Card.updateMany(cardFilter, { archivedAt: new Date(), archivedWithColumn: true });
     } else {
@@ -140,7 +152,7 @@ export async function createCard(req, res) {
   const index = int(req.body.index);
   const state = {};
   const position = index === null ? await endPosition(Card, filter) : await placeAt(Card, filter, null, index, state);
-  const card = await Card.create({ project: req.project._id, column: column._id, title, position, createdBy: req.user._id, watchers: [req.user._id] });
+  const card = await Card.create({ project: req.project._id, column: column._id, title, position, createdBy: req.user._id, watchers: [req.user._id], completedAt: column.isDone ? new Date() : null });
   await logActivity({ project: req.project, actor: req.user, type: 'card.created', card, data: { column: column.name } });
   if (state.renumbered) await reload(req);
   else await emitProject(req.project._id, 'card.upsert', { card: serializeCard(card) }, req.user._id);
@@ -157,6 +169,8 @@ export async function moveCard(req, res) {
   const state = {};
   const fromColumn = String(card.column) !== String(column._id) ? await Column.findById(card.column).select('name') : null;
   card.column = column._id;
+  // Entering a done column completes the task; leaving it reopens it. Moving between two done columns keeps the date.
+  card.completedAt = column.isDone ? card.completedAt || new Date() : null;
   card.position = await placeAt(Card, { column: column._id, archivedAt: null }, card._id, index, state);
   await card.save();
   // Final index in the column, so other browsers can place the card without knowing our positions.

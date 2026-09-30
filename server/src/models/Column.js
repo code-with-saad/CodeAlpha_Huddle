@@ -6,6 +6,8 @@ const columnSchema = new mongoose.Schema(
     name: { type: String, required: true, trim: true, minlength: 1, maxlength: 40 },
     // Fractional order key: moving an item only rewrites that one document.
     position: { type: Number, required: true },
+    // A task in a column that counts as done is completed. Moving it out reopens it.
+    isDone: { type: Boolean, default: false },
     archivedAt: { type: Date, default: null },
   },
   { timestamps: true }

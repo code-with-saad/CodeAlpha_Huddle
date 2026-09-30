@@ -21,6 +21,7 @@ import {
 } from '../controllers/cardController.js';
 import { addComment, deleteComment, editComment } from '../controllers/commentController.js';
 import { listActivity } from '../controllers/activityController.js';
+import { getDashboard } from '../controllers/dashboardController.js';
 import { bulkCards, duplicateCard, listArchive, restoreCard, restoreColumn } from '../controllers/cardOpsController.js';
 import { createLabel, deleteLabel, updateLabel } from '../controllers/labelController.js';
 import { requireAuth } from '../middleware/auth.js';
@@ -41,6 +42,7 @@ router.post('/:id/columns/:columnId/restore', admin, restoreColumn);
 
 router.get('/:id/archive', read, listArchive);
 router.get('/:id/activity', read, listActivity);
+router.get('/:id/dashboard', read, getDashboard);
 
 router.post('/:id/cards', member, createCard);
 router.post('/:id/cards/bulk', member, bulkCards);

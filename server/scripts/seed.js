@@ -57,7 +57,8 @@ async function removeDemo() {
 async function makeProject({ name, description, members, columns, labels }) {
   const project = await Project.create({ name, description, members: members.map(([user, role]) => ({ user: user._id, role })) });
   const cols = {};
-  for (const [i, cname] of columns.entries()) cols[cname] = await Column.create({ project: project._id, name: cname, position: STEP * (i + 1) });
+  // Columns named Done or Shipped count as done, so the dashboard has completions to show.
+  for (const [i, cname] of columns.entries()) cols[cname] = await Column.create({ project: project._id, name: cname, position: STEP * (i + 1), isDone: /^(done|shipped)$/i.test(cname) });
   const labs = {};
   for (const [lname, color] of Object.entries(labels)) labs[lname] = await Label.create({ project: project._id, name: lname, color });
   return { project, cols, labs };
@@ -66,14 +67,20 @@ async function makeProject({ name, description, members, columns, labels }) {
 async function addCards(ctx, byId, list) {
   const counters = {};
   const cards = {};
-  for (const c of list) {
+  for (const [idx, c] of list.entries()) {
     const n = (counters[c.col] = (counters[c.col] || 0) + 1);
+    const finished = ctx.cols[c.col].isDone;
+    // Spread the history over the last weeks: done tasks finished 1 to 8 days ago, all created earlier than that.
+    const doneAgo = finished ? c.done ?? 1 + (idx % 8) : null;
+    const madeAgo = Math.max(c.created ?? 2 + ((idx * 3) % 21), (doneAgo ?? 0) + 2);
     const card = await Card.create({
       project: ctx.project._id,
       column: ctx.cols[c.col]._id,
       title: c.title,
       position: STEP * n,
       createdBy: byId[c.by || 'demo_maya']._id,
+      createdAt: ago(madeAgo * 24),
+      completedAt: finished ? ago(doneAgo * 24) : null,
       description: c.description || '',
       assignees: (c.assign || []).map((u) => byId[u]._id),
       labels: (c.labels || []).map((l) => ctx.labs[l]._id),
@@ -122,6 +129,22 @@ async function seed() {
     { col: 'Done', title: 'Finalize the brand colours', priority: 'none', due: -8, labels: ['Design'], assign: ['demo_maya'], checklist: [['Accent', true], ['Neutrals', true], ['Dark mode', true]] },
     { col: 'Done', title: 'Sitemap and page inventory', priority: 'low', due: -14, labels: ['Docs'], assign: ['demo_priya'] },
   ]);
+
+  // Older finished tasks, archived since. They are not on the board but they are real history for the charts.
+  const doneDays = [1, 1, 2, 3, 3, 4, 6, 7, 8, 9, 10, 12, 13, 15, 18, 20, 22, 26];
+  for (const [i, ago2] of doneDays.entries()) {
+    await Card.create({
+      project: web.project._id,
+      column: web.cols.Done._id,
+      title: `Finished task ${i + 1}`,
+      position: STEP * (100 + i),
+      createdBy: [maya, arjun, priya, sam][i % 4]._id,
+      assignees: [[maya, arjun, priya, sam][(i + 1) % 4]._id],
+      createdAt: ago((ago2 + 3 + (i % 6)) * 24),
+      completedAt: ago(ago2 * 24),
+      archivedAt: ago(Math.max(0, ago2 - 1) * 24),
+    });
+  }
 
   // Project 2: smaller, Maya is a member here.
   const app = await makeProject({

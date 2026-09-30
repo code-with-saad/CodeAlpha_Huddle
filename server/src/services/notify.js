@@ -71,6 +71,7 @@ export async function syncDueNotifications(userId) {
   const cards = await Card.find({
     project: { $in: projects.map((p) => p._id) },
     archivedAt: null,
+    completedAt: null,
     dueDate: { $ne: null, $gte: new Date(today.getTime() - 14 * DAY), $lt: new Date(today.getTime() + 2 * DAY) },
     $or: [{ assignees: userId }, { watchers: userId }],
   }).select('title project dueDate');

@@ -12,6 +12,12 @@ import { loadCard } from './cardController.js';
 const MAX_CARDS = 1000;
 const MAX_BULK = 100;
 const reload = (req) => emitProject(req.project._id, 'board.reload', {}, req.user._id);
+// Cards that are now in `column`: completed if it counts as done (keeping an earlier date), reopened if not.
+async function syncCompletion(ids, column) {
+  if (column.isDone) await Card.updateMany({ _id: { $in: ids }, completedAt: null }, { completedAt: new Date() });
+  else await Card.updateMany({ _id: { $in: ids } }, { completedAt: null });
+}
+
 const activeColumns = (project) => Column.find({ project, archivedAt: null }).sort({ position: 1 });
 
 // ---- Duplicate ----
@@ -24,6 +30,7 @@ export async function duplicateCard(req, res) {
   }
   const filter = { column: src.column, archivedAt: null };
   const at = await Card.countDocuments({ ...filter, position: { $lt: src.position } });
+  const srcColumn = await Column.findById(src.column).select('isDone');
   const state = {};
   // The copy sits right below the original. Attachments and comments are not copied; checklist items start unticked.
   const copy = await Card.create({
@@ -39,6 +46,7 @@ export async function duplicateCard(req, res) {
     dueDate: src.dueDate,
     checklist: src.checklist.map((i) => ({ text: i.text, done: false })),
     watchers: [...new Set([String(req.user._id), ...src.assignees.map(String)])],
+    completedAt: srcColumn?.isDone ? new Date() : null,
   });
   await logActivity({ project: req.project, actor: req.user, type: 'card.duplicated', card: copy, data: { from: src.title } });
   if (state.renumbered) await reload(req);
@@ -65,6 +73,7 @@ async function restoreCards(project, cards) {
   const cols = await activeColumns(project._id);
   if (!cols.length) return [];
   const live = new Set(cols.map((c) => String(c._id)));
+  const doneCols = new Set(cols.filter((c) => c.isDone).map((c) => String(c._id)));
   const restored = [];
   for (const c of cards) {
     if (!live.has(String(c.column))) {
@@ -73,6 +82,7 @@ async function restoreCards(project, cards) {
     }
     c.archivedAt = null;
     c.archivedWithColumn = false;
+    c.completedAt = doneCols.has(String(c.column)) ? c.completedAt || new Date() : null;
     await c.save();
     restored.push(c);
   }
@@ -135,6 +145,7 @@ export async function bulkCards(req, res) {
       ops.push({ updateOne: { filter: { _id: c._id }, update: { column: column._id, position: base + STEP * k } } });
     });
     await Card.bulkWrite(ops);
+    await syncCompletion(cards.map((c) => c._id), column);
   } else if (action === 'place') {
     // Exact restore of earlier places, used by Undo.
     const items = Array.isArray(req.body.items) ? req.body.items : [];
@@ -142,6 +153,9 @@ export async function bulkCards(req, res) {
     const ok = items.filter((i) => typeof i?.id === 'string' && byId.has(i.id) && live.has(String(i.columnId)) && Number.isFinite(i.position));
     if (!ok.length) return res.status(400).json({ message: 'Nothing to restore' });
     await Card.bulkWrite(ok.map((i) => ({ updateOne: { filter: { _id: i.id }, update: { column: i.columnId, position: i.position } } })));
+    // The places may be in done or open columns, so completion follows each card's column again.
+    const targets = await Column.find({ _id: { $in: [...new Set(ok.map((i) => String(i.columnId)))] } });
+    for (const col of targets) await syncCompletion(ok.filter((i) => String(i.columnId) === String(col._id)).map((i) => i.id), col);
     changed = ok.map((i) => ({ id: i.id }));
   } else if (action === 'assign') {
     const users = Array.isArray(req.body.userIds) ? [...new Set(req.body.userIds)] : null;
