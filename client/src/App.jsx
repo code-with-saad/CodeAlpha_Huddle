@@ -9,6 +9,11 @@ import MembersPage from './pages/MembersPage.jsx';
 import JoinPage from './pages/JoinPage.jsx';
 import NotificationsPage from './pages/NotificationsPage.jsx';
 import BoardPage from './pages/board/BoardPage.jsx';
+import BoardViews from './pages/board/BoardViews.jsx';
+import CalendarView from './pages/board/CalendarView.jsx';
+import ListView from './pages/board/ListView.jsx';
+import ActivityPage from './pages/ActivityPage.jsx';
+import ArchivePage from './pages/ArchivePage.jsx';
 
 function Stub({ title, children }) {
   return (
@@ -43,7 +48,13 @@ export default function App() {
       >
         <Route index element={<ProjectsPage />} />
         <Route path="p/:id" element={<ProjectLayout />}>
-          <Route index element={<BoardPage />} />
+          <Route element={<BoardViews />}>
+            <Route index element={<BoardPage />} />
+            <Route path="list" element={<ListView />} />
+            <Route path="calendar" element={<CalendarView />} />
+          </Route>
+          <Route path="activity" element={<ActivityPage />} />
+          <Route path="archive" element={<ArchivePage />} />
           <Route path="members" element={<MembersPage />} />
         </Route>
         <Route path="notifications" element={<NotificationsPage />} />

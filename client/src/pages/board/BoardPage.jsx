@@ -1,5 +1,4 @@
-import { Suspense, lazy, useMemo, useRef, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useMemo, useRef, useState } from 'react';
 import {
   DndContext,
   DragOverlay,
@@ -21,14 +20,11 @@ import PromptDialog from '../../components/PromptDialog.jsx';
 import { errorMessage } from '../../lib/api.js';
 import { atLeast } from '../../lib/roles.js';
 import { toast } from '../../lib/toast.js';
-import useBoard, { findColumnOf } from '../../lib/useBoard.js';
-import { useProject } from '../ProjectLayout.jsx';
+import { findColumnOf } from '../../lib/useBoard.js';
+import { useBoardCtx } from './BoardContext.jsx';
 import BoardColumn from './BoardColumn.jsx';
 import { CardView } from './BoardCard.jsx';
 import './board.css';
-
-// The card panel pulls in the markdown renderer, so it loads only when a card is opened.
-const CardPanel = lazy(() => import('./card/CardPanel.jsx'));
 
 const colId = (id) => String(id).slice(4);
 const isColumnId = (id) => String(id).startsWith('col:');
@@ -152,15 +148,14 @@ function DeleteColumnDialog({ column, others, cardCount, onDelete, onClose }) {
 }
 
 export default function BoardPage() {
-  const { project } = useProject();
-  const api = useBoard(project.id);
-  const { board } = api;
+  const api = useBoardCtx();
+  const { board, project } = api;
   const canEdit = atLeast(project.myRole, 'member') && !project.archived;
   const canManage = atLeast(project.myRole, 'admin') && !project.archived;
   const people = useMemo(() => project.members.map((m) => m.user), [project.members]);
 
-  const [params, setParams] = useSearchParams();
-  const openId = params.get('card');
+  // Dragging is off while filters hide part of a column (the drop position would be wrong) or while selecting.
+  const canDrag = canEdit && api.activeFilters === 0 && !api.selecting;
   const [active, setActive] = useState(null); // { type, id }
   const [dialog, setDialog] = useState(null); // { kind, ... }
   const snapshot = useRef(null);
@@ -290,14 +285,15 @@ export default function BoardPage() {
 
   const actions = {
     addCard: api.addCard,
-    openCard: (card) => setParams({ card: card.id }),
+    openCard: (card) => api.openCard(card.id),
+    duplicateCard: api.duplicate,
     editCard: (card) => setDialog({ kind: 'card', card }),
     moveCard: (card, toCol, index) => {
       const cur = api.getBoard();
       const list = cur.cards[toCol] || [];
       return api.moveCard(card.id, toCol, index === Infinity ? list.length : Math.max(0, index));
     },
-    archiveCard: api.archiveCard,
+    archiveCard: api.archiveWithUndo,
     renameColumn: (column) => setDialog({ kind: 'rename', column }),
     moveColumn: (column, index) => api.moveColumn(column.id, index),
     deleteColumn: (column) => setDialog({ kind: 'delete', column }),
@@ -308,6 +304,7 @@ export default function BoardPage() {
 
   return (
     <>
+      {api.activeFilters > 0 && canEdit && <p className="filter-note row-sub">Filters are on, so dragging and reordering are off. Clear them to rearrange.</p>}
       <DndContext sensors={sensors} collisionDetection={collision} onDragStart={onDragStart} onDragOver={onDragOver} onDragEnd={onDragEnd} onDragCancel={onDragCancel}>
         <div className={`board${active ? ' board-dragging' : ''}`}>
           <SortableContext items={columnIds} strategy={horizontalListSortingStrategy}>
@@ -317,11 +314,13 @@ export default function BoardPage() {
                 column={column}
                 index={i}
                 columns={board.columns}
-                cards={board.cards[column.id] || []}
+                cards={(board.cards[column.id] || []).filter(api.visible)}
                 labels={board.labels}
                 people={people}
                 canEdit={canEdit}
-                canManage={canManage}
+                canDrag={canDrag}
+                canManage={canManage && api.activeFilters === 0}
+                filtered={api.activeFilters > 0}
                 actions={actions}
               />
             ))}
@@ -340,20 +339,6 @@ export default function BoardPage() {
         </DragOverlay>
       </DndContext>
 
-      {openId && (
-        <Suspense fallback={<div className="progress" role="status" aria-label="Loading card" />}>
-        <CardPanel
-          key={openId}
-          cardId={openId}
-          board={{ labels: board.labels, columns: board.columns, setLabels: api.setLabels }}
-          onCardChange={api.mergeCard}
-          onClose={() => setParams({}, { replace: true })}
-          onArchive={async (card) => {
-            if (await api.archiveCard(card)) setParams({}, { replace: true });
-          }}
-        />
-        </Suspense>
-      )}
       {dialog?.kind === 'card' && (
         <PromptDialog
           title="Edit title"
@@ -383,7 +368,7 @@ export default function BoardPage() {
           column={dialog.column}
           others={board.columns.filter((c) => c.id !== dialog.column.id)}
           cardCount={(board.cards[dialog.column.id] || []).length}
-          onDelete={(options) => api.deleteColumn(dialog.column.id, options)}
+          onDelete={(options) => api.archiveColumn(dialog.column, options)}
           onClose={() => setDialog(null)}
         />
       )}

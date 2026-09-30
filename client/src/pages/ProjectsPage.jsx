@@ -123,17 +123,18 @@ export default function ProjectsPage() {
   const [invites, setInvites] = useState([]);
   const [error, setError] = useState('');
   const [creating, setCreating] = useState(false);
+  const [showArchived, setShowArchived] = useState(false);
 
   const load = useCallback(async () => {
     try {
-      const [p, i] = await Promise.all([api.get('/projects'), api.get('/invites')]);
+      const [p, i] = await Promise.all([api.get('/projects', { params: showArchived ? { archived: 1 } : {} }), api.get('/invites')]);
       setProjects(p.data.projects);
       setInvites(i.data.invites);
       setError('');
     } catch (err) {
       setError(errorMessage(err));
     }
-  }, []);
+  }, [showArchived]);
 
   useEffect(() => {
     load();
@@ -152,6 +153,14 @@ export default function ProjectsPage() {
         <button type="button" className="btn btn-primary" onClick={() => setCreating(true)}>
           <Icon as={Plus} />
           New project
+        </button>
+      </div>
+      <div className="tabs" role="tablist" aria-label="Which projects">
+        <button type="button" role="tab" aria-selected={!showArchived} className="tab tab-btn" aria-current={!showArchived ? 'page' : undefined} onClick={() => setShowArchived(false)}>
+          Active
+        </button>
+        <button type="button" role="tab" aria-selected={showArchived} className="tab tab-btn" aria-current={showArchived ? 'page' : undefined} onClick={() => setShowArchived(true)}>
+          Archived
         </button>
       </div>
 
@@ -176,12 +185,12 @@ export default function ProjectsPage() {
             </h2>
           )}
           {projects.length === 0 ? (
-            <div className="empty">You are not in any projects yet. Create one to start a board, or open an invite link from a teammate.</div>
+            <div className="empty">{showArchived ? 'No archived projects.' : 'You are not in any projects yet. Create one to start a board, or open an invite link from a teammate.'}</div>
           ) : (
             <ul className="rows">
               {projects.map((p) => (
-                <li key={p.id}>
-                  <Link to={`/p/${p.id}`} className="row">
+                <li key={p.id} className={showArchived ? 'row' : undefined}>
+                  <Link to={`/p/${p.id}`} className="row" style={showArchived ? { flex: 1, border: 0, padding: 0 } : undefined}>
                     <div className="row-main">
                       <span className="row-title">{p.name}</span>
                       {p.description && <span className="row-sub">{p.description}</span>}
@@ -193,6 +202,23 @@ export default function ProjectsPage() {
                     </div>
                     <RoleBadge role={p.myRole} />
                   </Link>
+                  {showArchived && p.myRole === 'owner' && (
+                    <button
+                      type="button"
+                      className="btn btn-sm"
+                      onClick={async () => {
+                        try {
+                          await api.post(`/projects/${p.id}/restore`);
+                          toast.success(`Restored ${p.name}`);
+                        } catch (err) {
+                          toast.error(errorMessage(err));
+                        }
+                        load();
+                      }}
+                    >
+                      Restore
+                    </button>
+                  )}
                 </li>
               ))}
             </ul>

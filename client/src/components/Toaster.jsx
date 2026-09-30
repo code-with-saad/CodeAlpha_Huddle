@@ -21,7 +21,19 @@ export default function Toaster() {
     <div ref={ref} popover="manual" className="toaster" aria-label="Notifications">
       {items.map((t) => (
         <div key={t.id} className={`toast toast-${t.kind}`} role={t.kind === 'error' ? 'alert' : 'status'}>
-          <span>{t.message}</span>
+          <span className="toast-text">{t.message}</span>
+          {t.action && (
+            <button
+              type="button"
+              className="toast-action"
+              onClick={() => {
+                dismiss(t.id);
+                t.action.onClick();
+              }}
+            >
+              {t.action.label}
+            </button>
+          )}
           <button type="button" className="toast-close" onClick={() => dismiss(t.id)} aria-label="Dismiss">
             <Icon as={X} />
           </button>

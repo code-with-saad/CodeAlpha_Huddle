@@ -70,7 +70,7 @@ function AddCard({ onAdd }) {
   );
 }
 
-export default function BoardColumn({ column, index, columns, cards, labels, people, canEdit, canManage, actions }) {
+export default function BoardColumn({ column, index, columns, cards, labels, people, canEdit, canDrag, canManage, filtered, actions }) {
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({
     id: `col:${column.id}`,
     data: { type: 'column' },
@@ -116,15 +116,18 @@ export default function BoardColumn({ column, index, columns, cards, labels, peo
               columnId={column.id}
               columns={columns}
               canEdit={canEdit}
+              canDrag={canDrag}
+              reorder={!filtered}
               labels={labels}
               people={people}
               onOpen={actions.openCard}
               onEdit={actions.editCard}
+              onDuplicate={actions.duplicateCard}
               onMove={actions.moveCard}
               onArchive={actions.archiveCard}
             />
           ))}
-          {cards.length === 0 && <p className="column-empty">{canEdit ? 'No tasks. Add one below.' : 'No tasks.'}</p>}
+          {cards.length === 0 && <p className="column-empty">{filtered ? 'No matching tasks.' : canEdit ? 'No tasks. Add one below.' : 'No tasks.'}</p>}
         </div>
       </SortableContext>
 

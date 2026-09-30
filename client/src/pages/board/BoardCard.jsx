@@ -6,6 +6,7 @@ import Icon from '../../components/Icon.jsx';
 import Menu from '../../components/Menu.jsx';
 import { dueInfo } from '../../lib/date.js';
 import { textOn } from '../../lib/labelColors.js';
+import { useBoardCtx } from './BoardContext.jsx';
 
 export const PRIORITY_LABEL = { none: 'No priority', low: 'Low', medium: 'Medium', high: 'High', urgent: 'Urgent' };
 
@@ -28,7 +29,7 @@ export function PriorityMark({ priority, withText = false }) {
 }
 
 // Visual card. Also used inside the drag overlay, so it takes no drag hooks itself.
-export function CardView({ card, menu, labels = [], people = [], overlay = false }) {
+export function CardView({ card, menu, labels = [], people = [], overlay = false, selectable = false, checked = false }) {
   const due = dueInfo(card.dueDate);
   const cardLabels = (card.labels || []).map((id) => labels.find((l) => l.id === id)).filter(Boolean);
   const assignees = (card.assignees || []).map((id) => people.find((p) => p.id === id)).filter(Boolean);
@@ -36,7 +37,7 @@ export function CardView({ card, menu, labels = [], people = [], overlay = false
   const hasMeta = due || total || card.commentCount || card.attachmentCount;
 
   return (
-    <div className={`card${overlay ? ' card-overlay' : ''}`}>
+    <div className={`card${overlay ? ' card-overlay' : ''}${checked ? ' card-selected' : ''}`}>
       {cardLabels.length > 0 && (
         <div className="card-labels">
           {cardLabels.slice(0, 3).map((l) => (
@@ -46,6 +47,7 @@ export function CardView({ card, menu, labels = [], people = [], overlay = false
         </div>
       )}
       <div className="card-top">
+        {selectable && <input type="checkbox" className="card-check" checked={checked} readOnly tabIndex={-1} aria-label={`Select ${card.title}`} />}
         <p className="card-title">{card.title}</p>
         {menu}
       </div>
@@ -94,15 +96,16 @@ export function CardView({ card, menu, labels = [], people = [], overlay = false
   );
 }
 
-export default function BoardCard({ card, index, columnId, columns, count, canEdit, labels, people, onOpen, onEdit, onMove, onArchive }) {
+export default function BoardCard({ card, index, columnId, columns, count, canEdit, canDrag, reorder, labels, people, onOpen, onEdit, onDuplicate, onMove, onArchive }) {
+  const { selecting, selected, toggleSelect } = useBoardCtx();
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: card.id,
     data: { type: 'card', columnId },
-    disabled: !canEdit,
+    disabled: !canDrag,
   });
 
   // The Move to menu is the touch-friendly path: every action a drag can do is here too.
-  const menu = canEdit && (
+  const menu = canEdit && !selecting && (
     <Menu
       label={`Actions for ${card.title}`}
       className="icon-btn card-menu"
@@ -110,9 +113,10 @@ export default function BoardCard({ card, index, columnId, columns, count, canEd
       items={[
         { label: 'Open', onSelect: () => onOpen(card) },
         { label: 'Edit title', onSelect: () => onEdit(card) },
+        { label: 'Duplicate', onSelect: () => onDuplicate(card) },
         { separator: true },
-        { label: 'Move up', disabled: index === 0, onSelect: () => onMove(card, columnId, index - 1) },
-        { label: 'Move down', disabled: index === count - 1, onSelect: () => onMove(card, columnId, index + 1) },
+        { label: 'Move up', disabled: !reorder || index === 0, onSelect: () => onMove(card, columnId, index - 1) },
+        { label: 'Move down', disabled: !reorder || index === count - 1, onSelect: () => onMove(card, columnId, index + 1) },
         { separator: true },
         { heading: 'Move to' },
         ...columns.map((c) => ({ label: c.name, disabled: c.id === columnId, onSelect: () => onMove(card, c.id, Infinity) })),
@@ -130,14 +134,16 @@ export default function BoardCard({ card, index, columnId, columns, count, canEd
       {...attributes}
       {...listeners}
       aria-roledescription="sortable card"
-      onClick={() => onOpen(card)}
+      onClick={() => (selecting ? toggleSelect(card.id) : onOpen(card))}
       onKeyDown={(e) => {
-        // Enter opens the card; dnd-kit keeps Space for picking it up.
-        if (e.key === 'Enter' && e.target === e.currentTarget) onOpen(card);
-        else listeners?.onKeyDown?.(e);
+        // Enter opens the card (or ticks it while selecting); dnd-kit keeps Space for picking it up.
+        if (e.key === 'Enter' && e.target === e.currentTarget) {
+          if (selecting) toggleSelect(card.id);
+          else onOpen(card);
+        } else listeners?.onKeyDown?.(e);
       }}
     >
-      <CardView card={card} menu={menu} labels={labels} people={people} />
+      <CardView card={card} menu={menu} labels={labels} people={people} selectable={selecting} checked={selected.has(card.id)} />
     </div>
   );
 }

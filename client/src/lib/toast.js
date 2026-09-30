@@ -1,15 +1,17 @@
 // Tiny event-based toast store: toast.success('Saved'), toast.error('Failed').
+// A toast can carry one action, used for Undo: toast.success('Card archived', { action: { label: 'Undo', onClick } }).
 let listeners = [];
 let items = [];
 let nextId = 1;
 
 const emit = () => listeners.forEach((l) => l(items));
 
-function push(kind, message, ms) {
+function push(kind, message, ms, action) {
   const id = nextId++;
-  items = [...items, { id, kind, message }];
+  items = [...items, { id, kind, message, action }];
   emit();
-  setTimeout(() => dismiss(id), ms);
+  setTimeout(() => dismiss(id), action ? Math.max(ms, 8000) : ms);
+  return id;
 }
 
 export function dismiss(id) {
@@ -18,9 +20,9 @@ export function dismiss(id) {
 }
 
 export const toast = {
-  success: (m) => push('success', m, 4000),
-  info: (m) => push('info', m, 4000),
-  error: (m) => push('error', m, 7000),
+  success: (m, o = {}) => push('success', m, 4000, o.action),
+  info: (m, o = {}) => push('info', m, 4000, o.action),
+  error: (m, o = {}) => push('error', m, 7000, o.action),
 };
 
 export function subscribe(listener) {

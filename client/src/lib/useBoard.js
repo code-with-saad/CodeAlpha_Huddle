@@ -142,6 +142,10 @@ export default function useBoard(projectId) {
     setBoard,
     getBoard: () => ref.current,
 
+    // Applies an event to this board as if it had arrived over the network (used for our own quick results).
+    applyLocal(name, data) {
+      setBoard((b) => applyEvent(b, name, data));
+    },
     // Folds a card returned by the detail panel back into the board so the card face stays current.
     mergeCard(card) {
       setBoard((b) => {

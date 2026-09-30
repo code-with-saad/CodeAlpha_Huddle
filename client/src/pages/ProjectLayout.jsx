@@ -85,6 +85,18 @@ export default function ProjectLayout() {
         <NavLink to={`/p/${id}`} end className="tab">
           Board
         </NavLink>
+        <NavLink to={`/p/${id}/list`} className="tab">
+          List
+        </NavLink>
+        <NavLink to={`/p/${id}/calendar`} className="tab">
+          Calendar
+        </NavLink>
+        <NavLink to={`/p/${id}/activity`} className="tab tab-sep">
+          Activity
+        </NavLink>
+        <NavLink to={`/p/${id}/archive`} className="tab">
+          Archive
+        </NavLink>
         <NavLink to={`/p/${id}/members`} className="tab">
           Members
         </NavLink>
