@@ -45,6 +45,7 @@ export const serializeComment = (c) => ({
   id: c._id,
   card: c.card,
   author: String(c.author),
+  parent: c.parent ? String(c.parent) : null,
   body: c.body,
   mentions: (c.mentions || []).map(String),
   createdAt: c.createdAt,

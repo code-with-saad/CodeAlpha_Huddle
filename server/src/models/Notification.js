@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 
-export const NOTIFICATION_TYPES = ['assigned', 'mentioned', 'comment', 'due_soon', 'overdue', 'invited'];
+export const NOTIFICATION_TYPES = ['assigned', 'mentioned', 'comment', 'reply', 'due_soon', 'overdue', 'invited'];
 
 const notificationSchema = new mongoose.Schema(
   {

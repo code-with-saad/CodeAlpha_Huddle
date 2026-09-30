@@ -4,6 +4,7 @@ import Project from '../models/Project.js';
 import User from '../models/User.js';
 import { OBJECT_ID } from '../middleware/project.js';
 import { logActivity } from '../services/activity.js';
+import { appUrl, inviteEmail, mailConfigured, sendMail } from '../services/mail.js';
 import { notify } from '../services/notify.js';
 import { emitProject, emitUser } from '../services/realtime.js';
 import { assignableBy } from '../utils/roles.js';
@@ -11,6 +12,8 @@ import { assignableBy } from '../utils/roles.js';
 const str = (v) => (typeof v === 'string' ? v.trim() : '');
 const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const LINK_ROLES = ['member', 'viewer'];
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const EMAIL_INVITE_DAYS = 7;
 const notExpired = () => ({ $or: [{ expiresAt: null }, { expiresAt: { $gt: new Date() } }] });
 
 // Adds a member atomically so two simultaneous accepts cannot create a duplicate.
@@ -34,6 +37,7 @@ const serializeInvite = (i) => ({
   kind: i.kind,
   role: i.role,
   token: i.kind === 'link' ? i.token : undefined,
+  email: i.kind === 'email' ? i.email : undefined,
   expiresAt: i.expiresAt,
   uses: i.uses,
   createdAt: i.createdAt,
@@ -66,7 +70,11 @@ export async function createUserInvite(req, res) {
   const email = str(req.body.email).toLowerCase();
   const user = username ? await User.findOne({ username }) : email ? await User.findOne({ email }) : null;
   if (!user) {
-    return res.status(404).json({ message: 'No account found. Share an invite link instead.' });
+    // No account yet. With email set up, invite the address itself: it gets a link that joins as this role.
+    if (!EMAIL_RE.test(email) || email.length > 254 || !mailConfigured()) {
+      return res.status(404).json({ message: mailConfigured() ? 'No account found. Enter a full email address to send an invitation, or share an invite link.' : 'No account found. Share an invite link instead.' });
+    }
+    return inviteByEmail(req, res, email, role);
   }
   if (req.project.members.some((m) => m.user.equals(user._id))) {
     return res.status(409).json({ message: 'That person is already a member' });
@@ -78,7 +86,46 @@ export async function createUserInvite(req, res) {
   await invite.populate([{ path: 'invitee', select: 'username name avatar' }, { path: 'createdBy', select: 'username name avatar' }]);
   await notify([user._id], { type: 'invited', actor: req.user, project: req.project, snippet: `Invited you as ${role}` });
   await emitUser(user._id, 'invites.changed');
-  res.status(201).json({ invite: serializeInvite(invite) });
+  // Someone who has an account also gets an email when mail is set up, with a link straight to their invitations.
+  let emailed = false;
+  if (mailConfigured() && EMAIL_RE.test(user.email)) {
+    const message = inviteEmail({ inviter: req.user.name || req.user.username, project: req.project.name, role, url: `${appUrl()}/projects` });
+    emailed = await sendMail({ to: user.email, ...message }).then(() => true, (err) => { console.error('invite email failed:', err.message); return false; });
+  }
+  res.status(201).json({ invite: serializeInvite(invite), emailed });
+}
+
+// Invite an address that has no account: a single use link is emailed to it.
+async function inviteByEmail(req, res, email, role) {
+  if (await Invite.exists({ project: req.project._id, email, kind: 'email', status: 'pending', ...notExpired() })) {
+    return res.status(409).json({ message: 'That address already has a pending invitation' });
+  }
+  const invite = await Invite.create({
+    project: req.project._id,
+    kind: 'email',
+    email,
+    token: crypto.randomBytes(24).toString('base64url'),
+    role,
+    createdBy: req.user._id,
+    expiresAt: new Date(Date.now() + EMAIL_INVITE_DAYS * 86400000),
+  });
+  const message = inviteEmail({
+    inviter: req.user.name || req.user.username,
+    project: req.project.name,
+    role,
+    url: `${appUrl()}/join/${invite.token}`,
+    expires: invite.expiresAt.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }),
+  });
+  try {
+    await sendMail({ to: email, ...message });
+  } catch (err) {
+    // The invitation is useless if nobody can read it, so do not leave it pending.
+    console.error('invite email failed:', err.message);
+    await Invite.deleteOne({ _id: invite._id });
+    return res.status(502).json({ message: 'The email could not be sent. Try again in a moment, or share an invite link instead.' });
+  }
+  await invite.populate('createdBy', 'username name avatar');
+  res.status(201).json({ invite: serializeInvite(invite), emailed: true });
 }
 
 export async function createLink(req, res) {
@@ -150,7 +197,7 @@ export const respondToInvite = (action) => async (req, res) => {
 
 async function findLink(token) {
   if (typeof token !== 'string' || token.length > 100) return null;
-  const invite = await Invite.findOne({ token, kind: 'link', status: 'pending', ...notExpired() }).populate('project');
+  const invite = await Invite.findOne({ token, kind: { $in: ['link', 'email'] }, status: 'pending', ...notExpired() }).populate('project');
   return invite && invite.project && !invite.project.archivedAt ? invite : null;
 }
 
@@ -173,5 +220,7 @@ export async function joinLink(req, res) {
     await Invite.updateOne({ _id: invite._id }, { $inc: { uses: 1 } });
     await joined(invite.project._id, req.user._id);
   }
+  // An emailed invitation works once.
+  if (invite.kind === 'email') await Invite.updateOne({ _id: invite._id }, { status: 'accepted' });
   res.json({ ok: true, projectId: invite.project._id });
 }

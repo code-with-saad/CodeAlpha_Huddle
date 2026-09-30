@@ -3,10 +3,12 @@ import mongoose from 'mongoose';
 // Two kinds share one collection:
 //  - "user": a pending invitation for one existing account (found by username or email)
 //  - "link": a shareable token anyone signed in can use until it is revoked or expires
+//  - "email": a single use token emailed to an address that has no account yet
 const inviteSchema = new mongoose.Schema(
   {
     project: { type: mongoose.Schema.Types.ObjectId, ref: 'Project', required: true, index: true },
-    kind: { type: String, enum: ['user', 'link'], required: true },
+    kind: { type: String, enum: ['user', 'link', 'email'], required: true },
+    email: { type: String, default: null, lowercase: true, trim: true, maxlength: 254 },
     invitee: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
     token: { type: String, default: null },
     role: { type: String, enum: ['admin', 'member', 'viewer'], required: true },
@@ -20,6 +22,8 @@ const inviteSchema = new mongoose.Schema(
 
 inviteSchema.index({ token: 1 }, { unique: true, partialFilterExpression: { token: { $type: 'string' } } });
 inviteSchema.index({ invitee: 1, status: 1 });
+// One open email invitation per address per project.
+inviteSchema.index({ project: 1, email: 1 }, { unique: true, partialFilterExpression: { kind: 'email', status: 'pending' } });
 // One open invitation per person per project.
 inviteSchema.index(
   { project: 1, invitee: 1 },

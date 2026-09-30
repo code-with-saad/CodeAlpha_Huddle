@@ -7,7 +7,8 @@
     "dev": "nodemon src/index.js",
     "start": "node src/index.js",
     "seed": "node scripts/seed.js",
-    "seed:remove": "node scripts/seed.js --remove"
+    "seed:remove": "node scripts/seed.js --remove",
+    "mail:test": "node scripts/mailTest.js"
   },
   "license": "ISC",
   "type": "module",
@@ -20,7 +21,8 @@
     "express-rate-limit": "^8.7.0",
     "helmet": "^8.3.0",
     "jsonwebtoken": "^9.0.3",
-    "mongoose": "^9.10.2"
+    "mongoose": "^9.10.2",
+    "nodemailer": "^10.0.13"
   },
   "devDependencies": {
     "nodemon": "^3.1.14"

@@ -33,7 +33,9 @@ router.delete('/:id/members/:userId', writeLimiter, loadProject(), removeMember)
 router.post('/:id/members/:userId/make-owner', writeLimiter, loadProject(), requireRole('owner'), transferOwnership);
 
 router.get('/:id/invites', loadProject(), requireRole('admin'), listProjectInvites);
-router.post('/:id/invites', writeLimiter, loadProject(), requireRole('admin'), createUserInvite);
+// Each of these can send an email, so they are limited more tightly than other writes.
+const inviteLimiter = rateLimit({ windowMs: 60 * 60 * 1000, limit: 30, standardHeaders: true, legacyHeaders: false, message: { message: 'You are sending a lot of invitations. Try again in a while.' } });
+router.post('/:id/invites', inviteLimiter, writeLimiter, loadProject(), requireRole('admin'), createUserInvite);
 router.post('/:id/invite-links', writeLimiter, loadProject(), requireRole('admin'), createLink);
 router.delete('/:id/invites/:inviteId', writeLimiter, loadProject(), requireRole('admin'), revokeInvite);
 
