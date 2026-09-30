@@ -70,7 +70,7 @@ function AddCard({ onAdd }) {
   );
 }
 
-export default function BoardColumn({ column, index, columns, cards, canEdit, canManage, actions }) {
+export default function BoardColumn({ column, index, columns, cards, labels, people, canEdit, canManage, actions }) {
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({
     id: `col:${column.id}`,
     data: { type: 'column' },
@@ -116,6 +116,9 @@ export default function BoardColumn({ column, index, columns, cards, canEdit, ca
               columnId={column.id}
               columns={columns}
               canEdit={canEdit}
+              labels={labels}
+              people={people}
+              onOpen={actions.openCard}
               onEdit={actions.editCard}
               onMove={actions.moveCard}
               onArchive={actions.archiveCard}

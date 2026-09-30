@@ -7,7 +7,7 @@ import { toast } from './toast.js';
 function build(data) {
   const cards = Object.fromEntries(data.columns.map((c) => [c.id, []]));
   for (const card of data.cards) cards[card.column]?.push(card);
-  return { columns: data.columns.map(({ id, name }) => ({ id, name })), cards };
+  return { columns: data.columns.map(({ id, name }) => ({ id, name })), cards, labels: data.labels || [] };
 }
 
 export const findColumnOf = (cards, cardId) => Object.keys(cards).find((k) => cards[k].some((c) => c.id === cardId));
@@ -63,6 +63,18 @@ export default function useBoard(projectId) {
     setBoard,
     getBoard: () => ref.current,
 
+    // Folds a card returned by the detail panel back into the board so the card face stays current.
+    mergeCard(card) {
+      setBoard((b) => {
+        const col = findColumnOf(b.cards, card.id);
+        if (!col) return b;
+        return { ...b, cards: { ...b.cards, [col]: b.cards[col].map((c) => (c.id === card.id ? { ...c, ...card, column: c.column } : c)) } };
+      });
+    },
+    setLabels(update) {
+      setBoard((b) => ({ ...b, labels: update(b.labels) }));
+    },
+
     async addCard(columnId, title) {
       const { data } = await api.post(`${base}/cards`, { columnId, title });
       setBoard((b) => ({ ...b, cards: { ...b.cards, [columnId]: [...(b.cards[columnId] || []), data.card] } }));
@@ -104,6 +116,7 @@ export default function useBoard(projectId) {
     async addColumn(name) {
       const { data } = await api.post(`${base}/columns`, { name });
       setBoard((b) => ({
+        ...b,
         columns: [...b.columns, { id: data.column.id, name: data.column.name }],
         cards: { ...b.cards, [data.column.id]: [] },
       }));

@@ -1,20 +1,100 @@
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { MoreHorizontal } from 'lucide-react';
+import { CheckSquare, Flag, MessageSquare, MoreHorizontal, Paperclip } from 'lucide-react';
+import Avatar from '../../components/Avatar.jsx';
 import Icon from '../../components/Icon.jsx';
 import Menu from '../../components/Menu.jsx';
+import { dueInfo } from '../../lib/date.js';
+import { textOn } from '../../lib/labelColors.js';
+
+export const PRIORITY_LABEL = { none: 'No priority', low: 'Low', medium: 'Medium', high: 'High', urgent: 'Urgent' };
+
+export function LabelChip({ label }) {
+  return (
+    <span className="label-chip" style={{ background: label.color, color: textOn(label.color) }}>
+      {label.name}
+    </span>
+  );
+}
+
+export function PriorityMark({ priority, withText = false }) {
+  if (priority === 'none') return null;
+  return (
+    <span className={`priority priority-${priority}`} title={`Priority: ${PRIORITY_LABEL[priority]}`}>
+      <Icon as={Flag} size={13} />
+      {withText ? <span>{PRIORITY_LABEL[priority]}</span> : <span className="visually-hidden">Priority: {PRIORITY_LABEL[priority]}</span>}
+    </span>
+  );
+}
 
 // Visual card. Also used inside the drag overlay, so it takes no drag hooks itself.
-export function CardView({ card, menu, overlay = false }) {
+export function CardView({ card, menu, labels = [], people = [], overlay = false }) {
+  const due = dueInfo(card.dueDate);
+  const cardLabels = (card.labels || []).map((id) => labels.find((l) => l.id === id)).filter(Boolean);
+  const assignees = (card.assignees || []).map((id) => people.find((p) => p.id === id)).filter(Boolean);
+  const { done = 0, total = 0 } = card.checklist || {};
+  const hasMeta = due || total || card.commentCount || card.attachmentCount;
+
   return (
     <div className={`card${overlay ? ' card-overlay' : ''}`}>
-      <p className="card-title">{card.title}</p>
-      {menu}
+      {cardLabels.length > 0 && (
+        <div className="card-labels">
+          {cardLabels.slice(0, 3).map((l) => (
+            <LabelChip key={l.id} label={l} />
+          ))}
+          {cardLabels.length > 3 && <span className="label-more">+{cardLabels.length - 3}</span>}
+        </div>
+      )}
+      <div className="card-top">
+        <p className="card-title">{card.title}</p>
+        {menu}
+      </div>
+      {(hasMeta || assignees.length > 0 || card.priority !== 'none') && (
+        <div className="card-foot">
+          <div className="card-meta mono">
+            {due && (
+              <span className={`meta meta-${due.state}`} title={due.text}>
+                {due.label}
+                <span className="visually-hidden">. {due.text}</span>
+              </span>
+            )}
+            {total > 0 && (
+              <span className={`meta${done === total ? ' meta-done' : ''}`} title="Checklist">
+                <Icon as={CheckSquare} size={13} />
+                {done}/{total}
+              </span>
+            )}
+            {card.commentCount > 0 && (
+              <span className="meta" title="Comments">
+                <Icon as={MessageSquare} size={13} />
+                {card.commentCount}
+              </span>
+            )}
+            {card.attachmentCount > 0 && (
+              <span className="meta" title="Attachments">
+                <Icon as={Paperclip} size={13} />
+                {card.attachmentCount}
+              </span>
+            )}
+          </div>
+          <div className="card-side">
+            <PriorityMark priority={card.priority} />
+            {assignees.length > 0 && (
+              <div className="avatar-stack" aria-label={`Assigned to ${assignees.map((a) => a.name).join(', ')}`}>
+                {assignees.slice(0, 3).map((a) => (
+                  <Avatar key={a.id} user={a} size={22} />
+                ))}
+                {assignees.length > 3 && <span className="label-more">+{assignees.length - 3}</span>}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-export default function BoardCard({ card, index, columnId, columns, count, canEdit, onEdit, onMove, onArchive }) {
+export default function BoardCard({ card, index, columnId, columns, count, canEdit, labels, people, onOpen, onEdit, onMove, onArchive }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: card.id,
     data: { type: 'card', columnId },
@@ -28,6 +108,7 @@ export default function BoardCard({ card, index, columnId, columns, count, canEd
       className="icon-btn card-menu"
       trigger={<Icon as={MoreHorizontal} size={16} />}
       items={[
+        { label: 'Open', onSelect: () => onOpen(card) },
         { label: 'Edit title', onSelect: () => onEdit(card) },
         { separator: true },
         { label: 'Move up', disabled: index === 0, onSelect: () => onMove(card, columnId, index - 1) },
@@ -49,8 +130,14 @@ export default function BoardCard({ card, index, columnId, columns, count, canEd
       {...attributes}
       {...listeners}
       aria-roledescription="sortable card"
+      onClick={() => onOpen(card)}
+      onKeyDown={(e) => {
+        // Enter opens the card; dnd-kit keeps Space for picking it up.
+        if (e.key === 'Enter' && e.target === e.currentTarget) onOpen(card);
+        else listeners?.onKeyDown?.(e);
+      }}
     >
-      <CardView card={card} menu={menu} />
+      <CardView card={card} menu={menu} labels={labels} people={people} />
     </div>
   );
 }

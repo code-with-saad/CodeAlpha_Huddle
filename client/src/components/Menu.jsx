@@ -23,7 +23,7 @@ export default function Menu({ label, trigger, items, className = 'icon-btn' }) 
     const left = Math.max(margin, Math.min(r.right - p.width, window.innerWidth - p.width - margin));
     const below = r.bottom + 4;
     const top = below + p.height > window.innerHeight - margin ? Math.max(margin, r.top - p.height - 4) : below;
-    setPos({ left, top });
+    setPos((prev) => (prev && prev.left === left && prev.top === top ? prev : { left, top }));
   }, []);
 
   useLayoutEffect(() => {
@@ -100,6 +100,7 @@ export default function Menu({ label, trigger, items, className = 'icon-btn' }) 
             role="menu"
             aria-label={label}
             onKeyDown={onKeyDown}
+            onClick={(e) => e.stopPropagation()}
             style={pos ? { left: pos.left, top: pos.top } : { left: 0, top: 0, visibility: 'hidden' }}
           >
             {items.map((item, i) =>
@@ -126,7 +127,7 @@ export default function Menu({ label, trigger, items, className = 'icon-btn' }) 
               )
             )}
           </div>,
-          document.body
+          btn.current?.closest('dialog') || document.body
         )}
     </>
   );

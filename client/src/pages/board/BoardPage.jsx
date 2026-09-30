@@ -1,4 +1,5 @@
-import { useMemo, useRef, useState } from 'react';
+import { Suspense, lazy, useMemo, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   DndContext,
   DragOverlay,
@@ -25,6 +26,9 @@ import { useProject } from '../ProjectLayout.jsx';
 import BoardColumn from './BoardColumn.jsx';
 import { CardView } from './BoardCard.jsx';
 import './board.css';
+
+// The card panel pulls in the markdown renderer, so it loads only when a card is opened.
+const CardPanel = lazy(() => import('./card/CardPanel.jsx'));
 
 const colId = (id) => String(id).slice(4);
 const isColumnId = (id) => String(id).startsWith('col:');
@@ -153,7 +157,10 @@ export default function BoardPage() {
   const { board } = api;
   const canEdit = atLeast(project.myRole, 'member') && !project.archived;
   const canManage = atLeast(project.myRole, 'admin') && !project.archived;
+  const people = useMemo(() => project.members.map((m) => m.user), [project.members]);
 
+  const [params, setParams] = useSearchParams();
+  const openId = params.get('card');
   const [active, setActive] = useState(null); // { type, id }
   const [dialog, setDialog] = useState(null); // { kind, ... }
   const snapshot = useRef(null);
@@ -272,6 +279,7 @@ export default function BoardPage() {
 
   const actions = {
     addCard: api.addCard,
+    openCard: (card) => setParams({ card: card.id }),
     editCard: (card) => setDialog({ kind: 'card', card }),
     moveCard: (card, toCol, index) => {
       const cur = api.getBoard();
@@ -299,6 +307,8 @@ export default function BoardPage() {
                 index={i}
                 columns={board.columns}
                 cards={board.cards[column.id] || []}
+                labels={board.labels}
+                people={people}
                 canEdit={canEdit}
                 canManage={canManage}
                 actions={actions}
@@ -319,6 +329,20 @@ export default function BoardPage() {
         </DragOverlay>
       </DndContext>
 
+      {openId && (
+        <Suspense fallback={<div className="progress" role="status" aria-label="Loading card" />}>
+        <CardPanel
+          key={openId}
+          cardId={openId}
+          board={{ labels: board.labels, columns: board.columns, setLabels: api.setLabels }}
+          onCardChange={api.mergeCard}
+          onClose={() => setParams({}, { replace: true })}
+          onArchive={async (card) => {
+            if (await api.archiveCard(card)) setParams({}, { replace: true });
+          }}
+        />
+        </Suspense>
+      )}
       {dialog?.kind === 'card' && (
         <PromptDialog
           title="Edit title"

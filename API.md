@@ -71,15 +71,41 @@ A project is `{ id, name, description, archived, myRole, createdAt, members: [{ 
 
 Columns are managed by admins and above. Cards are managed by members and above. Any member, including viewers, can read the board. Writes to an archived project return `409`.
 
-A column is `{ id, name, position }`. A card is `{ id, column, title, position, createdAt }`. Lists come back sorted by `position`.
+A column is `{ id, name, position }`. Lists come back sorted by `position`.
+
+A card on the board (its "face") is `{ id, column, title, position, createdAt, priority, dueDate, assignees, labels, checklist: { total, done }, commentCount, attachmentCount }`. `dueDate` is `YYYY-MM-DD` or null; `assignees` are user ids; `labels` are label ids. The board response also includes `labels: [{ id, name, color }]`.
 
 | Method | Path | Min role | Body | Result |
 |---|---|---|---|---|
-| GET | `/api/projects/:id/board` | viewer | none | `{ columns, cards }`, active items only |
+| GET | `/api/projects/:id/board` | viewer | none | `{ columns, cards, labels }`, active items only |
 | POST | `/api/projects/:id/columns` | admin | `name` (up to 40) | `201 { column }`, added at the end. `409` at 30 columns |
 | PATCH | `/api/projects/:id/columns/:columnId` | admin | `name?`, `index?` (final position among columns) | `{ column }` |
 | DELETE | `/api/projects/:id/columns/:columnId` | admin | query `moveTo=<columnId>` or `archiveCards=1` | `{ ok }`. `409` with `cardCount` if it has cards and neither option is given, and `409` for the last column |
 | POST | `/api/projects/:id/cards` | member | `columnId`, `title` (up to 200), `index?` (default end) | `201 { card }`. `409` at 1000 active cards |
-| PATCH | `/api/projects/:id/cards/:cardId` | member | `title` | `{ card }` |
 | POST | `/api/projects/:id/cards/:cardId/move` | member | `columnId`, `index` (final position in that column, clamped to the end) | `{ card }` |
 | DELETE | `/api/projects/:id/cards/:cardId` | member | none | `{ ok }`. Soft delete: the card is archived, not removed |
+
+## Card detail
+
+Every card write below returns the whole card as `{ card, comments, people }`. `card` is the face plus `description`, `createdBy`, `checklistItems: [{ id, text, done }]` and `attachments: [{ id, url, name, size, mime, uploadedBy, createdAt }]`. `people` are public profiles of comment authors, uploaders and the creator, including people who have left. A comment is `{ id, card, author, body, mentions, createdAt, editedAt }`.
+
+| Method | Path | Min role | Body | Notes |
+|---|---|---|---|---|
+| GET | `/api/projects/:id/cards/:cardId` | viewer | none | Up to the newest 300 comments, oldest first |
+| PATCH | `/api/projects/:id/cards/:cardId` | member | any of `title`, `description` (10,000), `priority` (`none`, `low`, `medium`, `high`, `urgent`), `dueDate` (`YYYY-MM-DD` or null), `assignees` (member ids, up to 10), `labels` (label ids, up to 10) | `400` with per-field `errors`. Impossible dates such as `2026-02-31` are rejected |
+| POST | `/api/projects/:id/cards/:cardId/checklist` | member | `text` (200) | `201`. Up to 50 items |
+| PATCH | `/api/projects/:id/cards/:cardId/checklist/:itemId` | member | `text?`, `done?` | |
+| DELETE | `/api/projects/:id/cards/:cardId/checklist/:itemId` | member | none | |
+| POST | `/api/projects/:id/cards/:cardId/attachments` | member | `url`, `name`, `size`, `mime`, `publicId`, `resourceType` (`image` or `raw`) from a signed Cloudinary upload | `201`. The URL must be in our account under `huddle/attachments/`. Types: JPG, PNG, WebP, GIF, PDF, TXT, CSV, MD, DOCX, XLSX, PPTX. Up to 10 MB and 10 per card |
+| DELETE | `/api/projects/:id/cards/:cardId/attachments/:attachmentId` | member | none | The uploader or an admin. Also deletes the file from Cloudinary |
+| POST | `/api/projects/:id/cards/:cardId/comments` | member | `body` (2,000) | `201 { comment }`. `@username` of project members is stored in `mentions` |
+| PATCH | `/api/projects/:id/cards/:cardId/comments/:commentId` | author | `body` | `{ comment }` |
+| DELETE | `/api/projects/:id/cards/:cardId/comments/:commentId` | author or admin | none | `{ ok }` |
+
+## Labels
+
+| Method | Path | Min role | Body | Result |
+|---|---|---|---|---|
+| POST | `/api/projects/:id/labels` | member | `name` (30), `color` (`#rrggbb`) | `201 { label }`. Up to 30 per project |
+| PATCH | `/api/projects/:id/labels/:labelId` | admin | `name?`, `color?` | `{ label }` |
+| DELETE | `/api/projects/:id/labels/:labelId` | admin | none | `{ ok }`. Removed from every card |

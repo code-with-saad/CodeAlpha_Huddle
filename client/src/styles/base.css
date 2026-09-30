@@ -184,8 +184,14 @@ button {
 .toaster {
   position: fixed;
   z-index: 60;
-  left: var(--space-4);
-  right: var(--space-4);
+  inset: auto var(--space-4) auto var(--space-4);
+  width: auto;
+  height: auto;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  overflow: visible;
   bottom: calc(var(--bottomnav-h) + var(--space-3) + env(safe-area-inset-bottom));
   display: flex;
   flex-direction: column;
