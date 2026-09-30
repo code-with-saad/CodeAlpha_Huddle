@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';
-import { Link, NavLink, Outlet, useParams } from 'react-router-dom';
+import { Link, NavLink, Outlet, useLocation, useParams } from 'react-router-dom';
+import { FILTER_KEYS } from '../lib/filters.js';
 import Avatar from '../components/Avatar.jsx';
 import RoleBadge from '../components/RoleBadge.jsx';
 import { useAuth } from '../lib/auth.jsx';
@@ -14,6 +15,7 @@ export const useProject = () => useContext(ProjectContext);
 // Loads the project once for every screen under /p/:id and shares it, with a reload for after changes.
 export default function ProjectLayout() {
   const { id } = useParams();
+  const location = useLocation();
   const { user } = useAuth();
   const [project, setProject] = useState(null);
   const [error, setError] = useState(null);
@@ -63,6 +65,12 @@ export default function ProjectLayout() {
     );
   }
 
+  // The three task views share their filters, so the tabs carry them along.
+  const current = new URLSearchParams(location.search);
+  const kept = new URLSearchParams();
+  FILTER_KEYS.forEach((k) => current.get(k) && kept.set(k, current.get(k)));
+  const keep = kept.toString() ? `?${kept}` : '';
+
   return (
     <ProjectContext.Provider value={{ project, reload }}>
       <div className="page-head">
@@ -82,13 +90,13 @@ export default function ProjectLayout() {
       </div>
       {project.archived && <p className="note">This project is archived and read-only. The owner can restore it from the Members tab.</p>}
       <nav className="tabs" aria-label="Project sections">
-        <NavLink to={`/p/${id}`} end className="tab">
+        <NavLink to={{ pathname: `/p/${id}`, search: keep }} end className="tab">
           Board
         </NavLink>
-        <NavLink to={`/p/${id}/list`} className="tab">
+        <NavLink to={{ pathname: `/p/${id}/list`, search: keep }} className="tab">
           List
         </NavLink>
-        <NavLink to={`/p/${id}/calendar`} className="tab">
+        <NavLink to={{ pathname: `/p/${id}/calendar`, search: keep }} className="tab">
           Calendar
         </NavLink>
         <NavLink to={`/p/${id}/activity`} className="tab tab-sep">

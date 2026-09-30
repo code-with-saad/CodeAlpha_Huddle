@@ -1,5 +1,5 @@
 import { Suspense, lazy, useEffect, useState } from 'react';
-import { Outlet, useSearchParams } from 'react-router-dom';
+import { Outlet, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { on } from '../../lib/bus.js';
 import { BoardProvider, useBoardCtx } from './BoardContext.jsx';
 import BulkBar from './BulkBar.jsx';
@@ -15,6 +15,16 @@ function Shell() {
   const [params] = useSearchParams();
   const openId = params.get('card');
   const [quick, setQuick] = useState(null);
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  // Arrived from the palette or a shortcut asking for a new task: open the dialog once the board has loaded.
+  useEffect(() => {
+    if (location.state?.quickAdd && ctx.board) {
+      setQuick({});
+      navigate(`${location.pathname}${location.search}`, { replace: true, state: null });
+    }
+  }, [location, ctx.board, navigate]);
 
   // Any screen can ask for the New task dialog (button, "c" shortcut, palette, calendar day).
   useEffect(() => on('quickadd', (opts) => ctx.board && setQuick(opts || {})), [ctx.board]);

@@ -1,8 +1,11 @@
-import { useState } from 'react';
-import { NavLink, Outlet } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { Bell, FolderKanban, Monitor, Moon, Sun, UserRound } from 'lucide-react';
 import Icon from './Icon.jsx';
+import CommandPalette from './CommandPalette.jsx';
 import NotificationBell from './NotificationBell.jsx';
+import ShortcutHelp from './ShortcutHelp.jsx';
+import { emit, on } from '../lib/bus.js';
 import { useNotifications } from '../lib/notifications.jsx';
 import { applyTheme, getTheme, nextTheme } from '../lib/theme.js';
 
@@ -33,6 +36,41 @@ export default function Shell() {
     applyTheme(next);
     setTheme(next);
   };
+  const [palette, setPalette] = useState(false);
+  const [help, setHelp] = useState(false);
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => on('toggle-theme', cycle));
+
+  // Global keys. Ctrl or Cmd + K always works; the single key ones are skipped while typing or with a dialog open.
+  useEffect(() => {
+    const typing = (el) => el && (el.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(el.tagName));
+    function onKey(e) {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setPalette((p) => !p);
+        return;
+      }
+      if (e.ctrlKey || e.metaKey || e.altKey || typing(e.target) || document.querySelector('dialog[open]')) return;
+      const inProject = location.pathname.match(/^\/p\/([^/]+)/);
+      const onBoardViews = inProject && !/\/(members|activity|archive)$/.test(location.pathname);
+      if (e.key === '?') {
+        e.preventDefault();
+        setHelp(true);
+      } else if (e.key === '/') {
+        e.preventDefault();
+        if (onBoardViews) emit('focus-filter');
+        else setPalette(true);
+      } else if (e.key === 'c' && inProject) {
+        e.preventDefault();
+        if (onBoardViews) emit('quickadd', {});
+        else navigate(`/p/${inProject[1]}`, { state: { quickAdd: true } });
+      }
+    }
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [location.pathname, navigate]);
 
   return (
     <div className="shell">
@@ -70,6 +108,9 @@ export default function Shell() {
       <nav className="bottomnav" aria-label="Main mobile">
         <Links size={20} />
       </nav>
+
+      {palette && <CommandPalette onClose={() => setPalette(false)} onHelp={() => setHelp(true)} />}
+      {help && <ShortcutHelp onClose={() => setHelp(false)} />}
     </div>
   );
 }
