@@ -1,5 +1,6 @@
 import Project from '../models/Project.js';
 import { OBJECT_ID } from '../middleware/project.js';
+import { createDefaultColumns } from './boardController.js';
 import { assignableBy, canManageMember, isRole } from '../utils/roles.js';
 
 const str = (v) => (typeof v === 'string' ? v.trim() : '');
@@ -45,6 +46,7 @@ export async function createProject(req, res) {
   if (Object.keys(errors).length) return res.status(400).json({ message: 'Check the highlighted fields', errors });
 
   const project = await Project.create({ ...out, members: [{ user: req.user._id, role: 'owner' }] });
+  await createDefaultColumns(project._id);
   const full = await populated(Project.findById(project._id));
   res.status(201).json({ project: serialize(full, 'owner') });
 }
