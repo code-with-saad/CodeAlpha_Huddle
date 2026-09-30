@@ -11,6 +11,7 @@ import Column from '../src/models/Column.js';
 import Comment from '../src/models/Comment.js';
 import Invite from '../src/models/Invite.js';
 import Label from '../src/models/Label.js';
+import Notification from '../src/models/Notification.js';
 import Project from '../src/models/Project.js';
 import User from '../src/models/User.js';
 import { STEP } from '../src/utils/order.js';
@@ -43,6 +44,7 @@ async function removeDemo() {
     Column.deleteMany({ project: { $in: demoProjects } }),
     Comment.deleteMany({ project: { $in: demoProjects } }),
     Label.deleteMany({ project: { $in: demoProjects } }),
+    Notification.deleteMany({ $or: [{ user: { $in: ids } }, { project: { $in: demoProjects } }] }),
     Invite.deleteMany({ $or: [{ project: { $in: demoProjects } }, { invitee: { $in: ids } }, { createdBy: { $in: ids } }] }),
   ]);
   await Project.deleteMany({ _id: { $in: demoProjects } });

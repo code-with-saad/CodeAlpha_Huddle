@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { api, errorMessage } from './api.js';
 import { toast } from './toast.js';
+import useChannel from './useChannel.js';
 
 // State for the open card: { card, comments, people }. Quick edits (priority, due date, people, labels,
 // checklist ticks, posting a comment) show at once and roll back if the server refuses them.
@@ -30,6 +31,39 @@ export default function useCard(projectId, cardId, onChange) {
   }, [projectId, cardId, set]);
 
   const base = `/projects/${projectId}/cards/${cardId}`;
+
+  const refetch = useCallback(async () => {
+    try {
+      const { data: d } = await api.get(`/projects/${projectId}/cards/${cardId}`);
+      set(d);
+      changeRef.current?.(d.card);
+    } catch (err) {
+      if (err.response?.status === 404) setError({ status: 404, message: 'This card was archived or does not exist.' });
+    }
+  }, [projectId, cardId, set]);
+  const refetchTimer = useRef(null);
+
+  // Live: comments from other people appear as they are posted, and any other change to this card reloads it.
+  useChannel(
+    `project:${projectId}`,
+    (name, e) => {
+      const mine = e.cardId === cardId || e.card?.id === cardId;
+      if (!mine || !ref.current) return;
+      if (name === 'comment.created') {
+        set((d) => (d.comments.some((c) => c.id === e.comment.id) ? d : { ...d, comments: [...d.comments, e.comment], card: { ...d.card, commentCount: e.card.commentCount } }));
+      } else if (name === 'comment.updated') {
+        set((d) => ({ ...d, comments: d.comments.map((c) => (c.id === e.comment.id ? e.comment : c)) }));
+      } else if (name === 'comment.deleted') {
+        set((d) => ({ ...d, comments: d.comments.filter((c) => c.id !== e.commentId), card: { ...d.card, commentCount: e.card.commentCount } }));
+      } else if (name === 'card.removed') {
+        setError({ status: 404, message: 'This card was archived or does not exist.' });
+      } else if (name === 'card.upsert' || name === 'card.moved') {
+        clearTimeout(refetchTimer.current);
+        refetchTimer.current = setTimeout(refetch, 250);
+      }
+    },
+    refetch
+  );
 
   // Takes a response from the API, which always carries the whole card.
   const accept = useCallback(
@@ -78,6 +112,13 @@ export default function useCard(projectId, cardId, onChange) {
       const items = c.checklistItems.filter((i) => i.id !== item.id);
       return { ...c, checklistItems: items, checklist: { total: items.length, done: items.filter((i) => i.done).length } };
     }, () => api.delete(`${base}/checklist/${item.id}`)),
+
+    // Following a card: notifications for its comments. Shows at once, rolls back if refused.
+    setWatching: (on) =>
+      run(
+        (c) => ({ ...c, watching: on, watcherCount: Math.max(0, c.watcherCount + (on ? 1 : -1)) }),
+        () => (on ? api.post(`${base}/watch`) : api.delete(`${base}/watch`))
+      ),
 
     addAttachment: (file) => run(null, () => api.post(`${base}/attachments`, file)),
     removeAttachment: (a) => run((c) => ({ ...c, attachments: c.attachments.filter((x) => x.id !== a.id), attachmentCount: c.attachmentCount - 1 }), () => api.delete(`${base}/attachments/${a.id}`)),

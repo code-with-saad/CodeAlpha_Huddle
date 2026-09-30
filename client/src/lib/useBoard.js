@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { api, errorMessage } from './api.js';
 import { toast } from './toast.js';
+import useChannel from './useChannel.js';
 
 // Board state: { columns: [{id, name}], cards: { [columnId]: [card] } }, both already in display order.
 // MongoDB stays the source of truth; every change is applied here first and rolled back if the API refuses it.
@@ -12,10 +13,45 @@ function build(data) {
 
 export const findColumnOf = (cards, cardId) => Object.keys(cards).find((k) => cards[k].some((c) => c.id === cardId));
 
+// Places a card in a column by its position key (used when another browser created it).
+function insertByPosition(list, card) {
+  const at = list.findIndex((c) => c.position > card.position);
+  return at < 0 ? [...list, card] : [...list.slice(0, at), card, ...list.slice(at)];
+}
+
+// Applies one realtime event to the board. Events are idempotent: applying the same one twice, or one
+// that this browser already applied optimistically, changes nothing.
+function applyEvent(b, name, data) {
+  const remove = (cards, id) => Object.fromEntries(Object.entries(cards).map(([k, list]) => [k, list.filter((c) => c.id !== id)]));
+  if (name === 'card.upsert' || (name.startsWith('comment.') && data.card)) {
+    const card = data.card;
+    const col = findColumnOf(b.cards, card.id);
+    if (col && col === card.column) {
+      return { ...b, cards: { ...b.cards, [col]: b.cards[col].map((c) => (c.id === card.id ? { ...c, ...card } : c)) } };
+    }
+    if (!b.cards[card.column]) return b;
+    const rest = remove(b.cards, card.id);
+    return { ...b, cards: { ...rest, [card.column]: insertByPosition(rest[card.column], card) } };
+  }
+  if (name === 'card.moved') {
+    const card = data.card;
+    if (!b.cards[card.column]) return b;
+    const rest = remove(b.cards, card.id);
+    const list = rest[card.column];
+    const at = Math.max(0, Math.min(data.index, list.length));
+    return { ...b, cards: { ...rest, [card.column]: [...list.slice(0, at), card, ...list.slice(at)] } };
+  }
+  if (name === 'card.removed') return { ...b, cards: remove(b.cards, data.cardId) };
+  return b;
+}
+
 export default function useBoard(projectId) {
   const [board, setBoardState] = useState(null);
   const [error, setError] = useState('');
   const ref = useRef(null);
+  const paused = useRef(false);
+  const missed = useRef(false);
+  const loading = useRef(false);
 
   // The ref always holds the latest state so drag handlers never read a stale copy.
   const setBoard = useCallback((next) => {
@@ -24,14 +60,35 @@ export default function useBoard(projectId) {
   }, []);
 
   const load = useCallback(async () => {
+    if (loading.current) return;
+    loading.current = true;
     try {
       const { data } = await api.get(`/projects/${projectId}/board`);
       setBoard(build(data));
       setError('');
     } catch (err) {
       setError(errorMessage(err));
+    } finally {
+      loading.current = false;
     }
   }, [projectId, setBoard]);
+
+  // Live updates. While a drag is in progress events are held back (they would move cards under the
+  // pointer); afterwards the board is simply reloaded. After an outage, or on first attach, it is
+  // reloaded too, so nothing depends on having seen every event.
+  useChannel(
+    `project:${projectId}`,
+    (name, data) => {
+      if (name === 'board.reload') return paused.current ? (missed.current = true) : load();
+      if (!ref.current) return;
+      if (paused.current) {
+        missed.current = true;
+        return;
+      }
+      setBoard((b) => applyEvent(b, name, data));
+    },
+    () => (paused.current ? (missed.current = true) : load())
+  );
 
   useEffect(() => {
     setBoard(null);
@@ -56,10 +113,32 @@ export default function useBoard(projectId) {
 
   const base = `/projects/${projectId}`;
 
+  // The server answers a move with the card's real position key; store it so later inserts order right.
+  const keepPosition = (res) => {
+    const card = res.data.card;
+    setBoard((b) => {
+      const col = findColumnOf(b.cards, card.id);
+      if (!col) return b;
+      return { ...b, cards: { ...b.cards, [col]: b.cards[col].map((c) => (c.id === card.id ? { ...c, position: card.position } : c)) } };
+    });
+    return res;
+  };
+
   return {
     board,
     error,
     reload: load,
+    // Drag start and end: hold live events while a card is in the air.
+    pause() {
+      paused.current = true;
+    },
+    resume() {
+      paused.current = false;
+      if (missed.current) {
+        missed.current = false;
+        load();
+      }
+    },
     setBoard,
     getBoard: () => ref.current,
 
@@ -105,12 +184,12 @@ export default function useBoard(projectId) {
           const placed = [...target.slice(0, at), { ...card, column: toColumn }, ...target.slice(at)];
           return { ...b, cards: { ...b.cards, [from]: from === toColumn ? placed : without, [toColumn]: placed } };
         },
-        () => api.post(`${base}/cards/${cardId}/move`, { columnId: toColumn, index })
+        async () => keepPosition(await api.post(`${base}/cards/${cardId}/move`, { columnId: toColumn, index }))
       );
     },
     // Drag end: state already shows the result, so only save and roll back to the pre-drag snapshot on failure.
     saveCardMove(cardId, toColumn, index, snapshot) {
-      return optimistic(null, () => api.post(`${base}/cards/${cardId}/move`, { columnId: toColumn, index }), snapshot);
+      return optimistic(null, async () => keepPosition(await api.post(`${base}/cards/${cardId}/move`, { columnId: toColumn, index })), snapshot);
     },
 
     async addColumn(name) {

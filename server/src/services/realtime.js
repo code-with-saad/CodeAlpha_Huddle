@@ -1,4 +1,5 @@
 import Ably from 'ably';
+import { currentTab } from './context.js';
 
 // MongoDB is the source of truth. After every successful write the API publishes a small event over
 // Ably REST so open browsers update. A failed publish is logged and never fails the request.
@@ -32,7 +33,7 @@ async function publish(channel, name, data) {
 }
 
 // Board and project events. `by` lets the sender's own tab ignore the echo of what it already applied.
-export const emitProject = (projectId, name, data, by) => publish(`project:${projectId}`, name, { ...data, by: by ? String(by) : null });
+export const emitProject = (projectId, name, data, by) => publish(`project:${projectId}`, name, { ...data, by: by ? String(by) : null, tab: currentTab() });
 
 // Personal events: notifications, invitations, access changes.
 export const emitUser = (userId, name, data = {}) => publish(`user:${userId}`, name, data);

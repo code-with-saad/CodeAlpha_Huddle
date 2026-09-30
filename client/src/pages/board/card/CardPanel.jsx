@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { CalendarDays, Trash2, X } from 'lucide-react';
+import { Bell, BellOff, CalendarDays, Trash2, X } from 'lucide-react';
 import Avatar from '../../../components/Avatar.jsx';
 import Icon from '../../../components/Icon.jsx';
 import Markdown from '../../../components/Markdown.jsx';
@@ -128,6 +128,18 @@ export default function CardPanel({ cardId, board, onClose, onCardChange, onArch
       <div className="sheet-bar">
         <span className="row-sub">{d ? `Column: ${board.columns.find((c) => c.id === d.card.column)?.name || 'unknown'}` : ''}</span>
         <div className="sheet-bar-actions">
+          {d && !project.archived && (
+            <button
+              type="button"
+              className="btn btn-sm"
+              aria-pressed={d.card.watching}
+              title={d.card.watching ? 'You get notified about comments on this card' : 'Get notified about comments on this card'}
+              onClick={() => card.setWatching(!d.card.watching)}
+            >
+              <Icon as={d.card.watching ? BellOff : Bell} size={14} />
+              {d.card.watching ? 'Unfollow' : 'Follow'}
+            </button>
+          )}
           {canEdit && d && (
             <button type="button" className="btn btn-sm btn-ghost" onClick={() => onArchive(d.card)}>
               <Icon as={Trash2} size={14} />

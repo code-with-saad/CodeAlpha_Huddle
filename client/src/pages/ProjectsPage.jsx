@@ -6,6 +6,7 @@ import Dialog from '../components/Dialog.jsx';
 import Icon from '../components/Icon.jsx';
 import RoleBadge from '../components/RoleBadge.jsx';
 import { api, errorMessage, fieldErrors } from '../lib/api.js';
+import { on } from '../lib/bus.js';
 import { toast } from '../lib/toast.js';
 
 function NewProjectDialog({ onClose }) {
@@ -136,6 +137,12 @@ export default function ProjectsPage() {
 
   useEffect(() => {
     load();
+  }, [load]);
+
+  // Live: a new invitation, or joining or leaving a project on another tab, refreshes the lists.
+  useEffect(() => {
+    const offs = [on('invites', load), on('access', load)];
+    return () => offs.forEach((off) => off());
   }, [load]);
 
   return (

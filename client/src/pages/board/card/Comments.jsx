@@ -49,13 +49,13 @@ function Composer({ members, onSubmit, initial = '', submitLabel = 'Comment', on
   }
 
   function onKeyDown(e) {
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) return submit(e);
     if (options.length) {
       if (e.key === 'ArrowDown') { e.preventDefault(); setPick((p) => (p + 1) % options.length); return; }
       if (e.key === 'ArrowUp') { e.preventDefault(); setPick((p) => (p - 1 + options.length) % options.length); return; }
       if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); insert(options[pick] || options[0]); return; }
       if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); setCaret(0); return; }
     }
-    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) submit(e);
   }
 
   return (

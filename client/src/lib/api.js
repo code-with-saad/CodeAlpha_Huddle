@@ -26,11 +26,16 @@ export const tokenStore = {
   },
 };
 
+// Identifies this browser tab. The API copies it onto the realtime events a request causes, so the tab
+// that made a change ignores the echo while every other tab applies it.
+export const TAB_ID = (globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`).slice(0, 36);
+
 export const api = axios.create({ baseURL: import.meta.env.VITE_API_URL || '/api' });
 
 api.interceptors.request.use((config) => {
   const token = tokenStore.get();
   if (token) config.headers.Authorization = `Bearer ${token}`;
+  config.headers['X-Tab-Id'] = TAB_ID;
   return config;
 });
 

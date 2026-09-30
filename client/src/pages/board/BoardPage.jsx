@@ -194,6 +194,7 @@ export default function BoardPage() {
 
   function onDragStart({ active: a }) {
     snapshot.current = api.getBoard();
+    api.pause();
     setActive({ type: a.data.current?.type, id: a.id });
   }
 
@@ -221,7 +222,17 @@ export default function BoardPage() {
     });
   }
 
-  function onDragEnd({ active: a, over }) {
+  // Live events stay on hold until the drop has been saved, so a reload cannot fetch the old order.
+  function onDragEnd(e) {
+    let saving;
+    try {
+      saving = handleDragEnd(e);
+    } finally {
+      Promise.resolve(saving).finally(() => api.resume());
+    }
+  }
+
+  function handleDragEnd({ active: a, over }) {
     const before = snapshot.current;
     setActive(null);
     snapshot.current = null;
@@ -232,8 +243,7 @@ export default function BoardPage() {
       const to = api.getBoard().columns.findIndex((c) => `col:${c.id}` === over.id);
       if (from === to || to < 0) return;
       api.setBoard((b) => ({ ...b, columns: arrayMove(b.columns, from, to) }));
-      api.saveColumnOrder(colId(a.id), to, before);
-      return;
+      return api.saveColumnOrder(colId(a.id), to, before);
     }
 
     let current = api.getBoard();
@@ -250,13 +260,14 @@ export default function BoardPage() {
     const wasCol = findColumnOf(before.cards, a.id);
     const wasIndex = before.cards[wasCol].findIndex((c) => c.id === a.id);
     if (wasCol === col && wasIndex === newIndex) return;
-    api.saveCardMove(a.id, col, newIndex, before);
+    return api.saveCardMove(a.id, col, newIndex, before);
   }
 
   function onDragCancel() {
     if (snapshot.current) api.setBoard(snapshot.current);
     snapshot.current = null;
     setActive(null);
+    api.resume();
   }
 
   if (api.error) {

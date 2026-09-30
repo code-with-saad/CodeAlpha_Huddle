@@ -10,6 +10,7 @@ import projectRoutes from './routes/projects.js';
 import inviteRoutes from './routes/invites.js';
 import boardRoutes from './routes/board.js';
 import notificationRoutes from './routes/notifications.js';
+import { withTab } from './services/context.js';
 
 // Refuse to run with a missing or weak signing secret: every token depends on it.
 if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) {
@@ -30,6 +31,7 @@ app.use(
 const origins = (process.env.CLIENT_URL || 'http://localhost:5173').split(',').map((o) => o.trim().replace(/\/$/, ''));
 app.use(cors({ origin: origins }));
 app.use(express.json({ limit: '1mb' }));
+app.use(withTab);
 
 // Health check answers without touching the database.
 app.get('/api/health', (_req, res) => res.json({ ok: true, service: 'huddle-api' }));

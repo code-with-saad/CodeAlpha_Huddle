@@ -81,7 +81,7 @@ CodeAlpha_Huddle/
 
 ## Running Locally
 
-**Prerequisites:** Node.js 20+, a MongoDB Atlas URI, a Cloudinary account and an Ably account (free tiers, no card).
+**Prerequisites:** Node.js 20+, a MongoDB Atlas URI, a Cloudinary account and an Ably account (free tiers, no card). `ABLY_API_KEY` is server-only and is never sent to the browser.
 
 **Backend**
 

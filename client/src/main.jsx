@@ -8,13 +8,16 @@ import './styles/ui.css';
 import App from './App.jsx';
 import Toaster from './components/Toaster.jsx';
 import { AuthProvider } from './lib/auth.jsx';
+import { NotificationsProvider } from './lib/notifications.jsx';
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <BrowserRouter>
       <AuthProvider>
-        <App />
-        <Toaster />
+        <NotificationsProvider>
+          <App />
+          <Toaster />
+        </NotificationsProvider>
       </AuthProvider>
     </BrowserRouter>
   </StrictMode>

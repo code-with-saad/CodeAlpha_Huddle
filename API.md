@@ -109,3 +109,48 @@ Every card write below returns the whole card as `{ card, comments, people }`. `
 | POST | `/api/projects/:id/labels` | member | `name` (30), `color` (`#rrggbb`) | `201 { label }`. Up to 30 per project |
 | PATCH | `/api/projects/:id/labels/:labelId` | admin | `name?`, `color?` | `{ label }` |
 | DELETE | `/api/projects/:id/labels/:labelId` | admin | none | `{ ok }`. Removed from every card |
+
+## Realtime
+
+Ably free plan. The API publishes after each successful write; the browser only subscribes.
+
+| Method | Path | Auth | Result |
+|---|---|---|---|
+| GET | `/api/realtime/token` | yes | An Ably token request for this person: `clientId` is their user id and the capability is `subscribe`, `presence`, `history` on `project:<id>` for each project they belong to and `subscribe`, `history` on `user:<id>`. Call it again after membership changes. `503` if Ably is not configured |
+
+Every event on a project channel carries `by` (user id) and `tab` (the `X-Tab-Id` header of the request that caused it). A client ignores events with its own tab id.
+
+| Channel | Event | Data |
+|---|---|---|
+| `project:<id>` | `card.upsert` | `{ card }` (board face) |
+| | `card.moved` | `{ card, index }`, index is the final position in its column |
+| | `card.removed` | `{ cardId }` |
+| | `comment.created` | `{ cardId, card, comment }` |
+| | `comment.updated` | `{ cardId, card, comment }` |
+| | `comment.deleted` | `{ cardId, card, commentId }` |
+| | `board.reload` | none. Columns or labels changed, or positions were renumbered |
+| | `project.changed` | none. Name, archive state, members or roles changed |
+| `user:<id>` | `notification` | `{ notification, unread }` |
+| | `access.changed` | `{ projectId }` or `{ removedFrom }`. Ask for a new token |
+| | `invites.changed` | none |
+
+Presence on `project:<id>`: each open tab enters with `{ name, username, avatar }`.
+
+## Notifications
+
+A notification is `{ id, type, actor, project: { id, name } | null, card: { id, title } | null, snippet, read, createdAt }`. Types: `assigned`, `mentioned`, `comment`, `due_soon`, `overdue`, `invited`.
+
+| Method | Path | Auth | Body or query | Result |
+|---|---|---|---|---|
+| GET | `/api/notifications` | yes | `limit` (up to 50), `before` (notification id), `unread=1` | `{ notifications, hasMore, unread }`. Also creates any missing due soon and overdue notifications for you |
+| GET | `/api/notifications/unread` | yes | none | `{ unread }`. Also runs the due date check, at most once a minute per server instance |
+| POST | `/api/notifications/read` | yes | `{ ids: [...] }` or `{ all: true }` | `{ unread }`. Only your own notifications are touched |
+
+## Watching a card
+
+| Method | Path | Min role | Result |
+|---|---|---|---|
+| POST | `/api/projects/:id/cards/:cardId/watch` | viewer | Full card, `watching: true` |
+| DELETE | `/api/projects/:id/cards/:cardId/watch` | viewer | Full card, `watching: false` |
+
+Card detail also returns `watching` and `watcherCount`.
