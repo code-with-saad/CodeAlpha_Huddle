@@ -91,7 +91,7 @@ export async function syncDueNotifications(userId) {
             card: c._id,
             projectName: names.get(String(c.project)) || '',
             cardTitle: c.title,
-            snippet: overdue ? `Was due ${date}` : days === 0 ? 'Due today' : 'Due tomorrow',
+            snippet: overdue ? `Was due ${c.dueDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' })}` : days === 0 ? 'Due today' : 'Due tomorrow',
             createdAt: new Date(),
           },
         },

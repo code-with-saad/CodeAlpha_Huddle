@@ -18,7 +18,7 @@ export default function Toaster() {
   }, [items]);
 
   return (
-    <div ref={ref} popover="manual" className="toaster" aria-label="Notifications">
+    <div ref={ref} popover="manual" className="toaster">
       {items.map((t) => (
         <div key={t.id} className={`toast toast-${t.kind}`} role={t.kind === 'error' ? 'alert' : 'status'}>
           <span className="toast-text">{t.message}</span>

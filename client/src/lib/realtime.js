@@ -82,7 +82,8 @@ export function subscribeChannel(name, handler, onResync) {
         e.onState = (change) => {
           if (change.current === 'attached' && !change.resumed) e.resync.forEach((f) => f());
         };
-        channel.subscribe(e.listener);
+        // subscribe() attaches the channel and returns a promise that rejects if the connection closes first.
+        Promise.resolve(channel.subscribe(e.listener)).catch(() => {});
         channel.on('attached', e.onState);
         // A channel that attached before this listener existed still needs one refetch.
         if (channel.state === 'attached') e.resync.forEach((f) => f());
@@ -126,7 +127,7 @@ export function joinPresence(name, data, onChange) {
     .then(async (c) => {
       if (stopped) return;
       channel = c.channels.get(name);
-      channel.presence.subscribe(emit);
+      Promise.resolve(channel.presence.subscribe(emit)).catch(() => {});
       await channel.presence.enter(data).catch(() => {});
       emit();
     })
