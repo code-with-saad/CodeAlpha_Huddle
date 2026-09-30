@@ -6,6 +6,7 @@ import 'dotenv/config';
 import bcrypt from 'bcryptjs';
 import mongoose from 'mongoose';
 import { connectDB } from '../src/config/db.js';
+import Activity from '../src/models/Activity.js';
 import Card from '../src/models/Card.js';
 import Column from '../src/models/Column.js';
 import Comment from '../src/models/Comment.js';
@@ -44,6 +45,7 @@ async function removeDemo() {
     Column.deleteMany({ project: { $in: demoProjects } }),
     Comment.deleteMany({ project: { $in: demoProjects } }),
     Label.deleteMany({ project: { $in: demoProjects } }),
+    Activity.deleteMany({ project: { $in: demoProjects } }),
     Notification.deleteMany({ $or: [{ user: { $in: ids } }, { project: { $in: demoProjects } }] }),
     Invite.deleteMany({ $or: [{ project: { $in: demoProjects } }, { invitee: { $in: ids } }, { createdBy: { $in: ids } }] }),
   ]);

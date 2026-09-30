@@ -3,7 +3,7 @@ import Icon from '../../components/Icon.jsx';
 import { on, emit } from '../../lib/bus.js';
 import { PRIORITY_LABEL } from './BoardCard.jsx';
 import { useBoardCtx } from './BoardContext.jsx';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { atLeast } from '../../lib/roles.js';
 
 // Search and filters shared by Board, List and Calendar. They live in the URL.
@@ -12,6 +12,16 @@ export default function FilterBar() {
   const { project, filters, setFilter, clearFilters, activeFilters, board, visibleCards, allCards, selecting, setSelecting, clearSelection } = ctx;
   const canEdit = atLeast(project.myRole, 'member') && !project.archived;
   const input = useRef(null);
+
+  // The box keeps its own text and pushes it to the URL after a pause. Binding it straight to the
+  // router made fast typing drop characters, because route updates are applied asynchronously.
+  const [text, setText] = useState(filters.q);
+  useEffect(() => setText(filters.q), [filters.q]);
+  useEffect(() => {
+    if (text === filters.q) return;
+    const t = setTimeout(() => setFilter('q', text), 180);
+    return () => clearTimeout(t);
+  }, [text, filters.q, setFilter]);
 
   // "/" focuses the search box (see the global shortcuts).
   useEffect(() => on('focus-filter', () => input.current?.focus()), []);
@@ -24,11 +34,11 @@ export default function FilterBar() {
           ref={input}
           id="task-filter"
           className="input input-sm"
-          value={filters.q}
+          value={text}
           placeholder="Filter tasks"
           aria-label="Filter tasks by title"
-          onChange={(e) => setFilter('q', e.target.value)}
-          onKeyDown={(e) => e.key === 'Escape' && (setFilter('q', ''), e.currentTarget.blur())}
+          onChange={(e) => setText(e.target.value)}
+          onKeyDown={(e) => e.key === 'Escape' && (setText(''), setFilter('q', ''), e.currentTarget.blur())}
         />
       </div>
       <select className="input input-sm" aria-label="Assignee" value={filters.assignee} onChange={(e) => setFilter('assignee', e.target.value)}>

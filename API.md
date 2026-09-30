@@ -154,3 +154,43 @@ A notification is `{ id, type, actor, project: { id, name } | null, card: { id, 
 | DELETE | `/api/projects/:id/cards/:cardId/watch` | viewer | Full card, `watching: false` |
 
 Card detail also returns `watching` and `watcherCount`.
+
+## Activity
+
+An activity line is `{ id, type, actor, card: { id, title } | null, data, createdAt }`. Types: `card.created`, `card.moved`, `card.renamed`, `card.archived`, `card.restored`, `card.duplicated`, `card.assigned`, `card.unassigned`, `card.priority`, `card.due`, `card.commented`, `card.attached`, `card.bulk`, `column.created`, `column.renamed`, `column.deleted`, `column.restored`, `member.joined`, `member.removed`, `member.role`, `project.updated`, `project.archived`, `project.restored`.
+
+| Method | Path | Min role | Query | Result |
+|---|---|---|---|---|
+| GET | `/api/projects/:id/activity` | viewer | `group` (`cards`, `comments`, `columns`, `members`, `project`), `type`, `actor` (user id), `card` (card id), `q` (task title text), `before` (activity id), `limit` (up to 50) | `{ activity, hasMore }`, newest first. Unknown filter values are ignored |
+
+## Duplicate, archive and restore
+
+| Method | Path | Min role | Result |
+|---|---|---|---|
+| POST | `/api/projects/:id/cards/:cardId/duplicate` | member | `201 { card }`. Placed right below the original |
+| GET | `/api/projects/:id/archive` | viewer | `{ cards: [{ id, title, column, columnArchived, archivedAt, withColumn }], columns: [{ id, name, archivedAt, cardCount }] }` |
+| POST | `/api/projects/:id/cards/:cardId/restore` | member | `{ card }`. Keeps its old place if the column still exists, otherwise goes to the first column |
+| POST | `/api/projects/:id/columns/:columnId/restore` | admin | `{ ok }`. Brings back the cards archived with it |
+
+Deleting a card is `DELETE /api/projects/:id/cards/:cardId` and deleting a column is `DELETE /api/projects/:id/columns/:columnId`; both archive. Nothing is removed for good.
+
+## Bulk actions
+
+`POST /api/projects/:id/cards/bulk` (member). Body `{ action, ids }` with 1 to 100 card ids, plus:
+
+| action | extra fields | Notes |
+|---|---|---|
+| `move` | `columnId` | Appends to the end of that column in the order of `ids`. Answers `changed: [{ id, columnId, position }]` with the previous places |
+| `place` | `items: [{ id, columnId, position }]` | Puts cards back at exact earlier places (used by Undo) |
+| `assign` | `userIds` (members, up to 10), `mode` (`add` default, or `remove`) | One notification per person for the whole batch |
+| `label` | `labelId`, `mode` (`add` or `remove`) | |
+| `archive` | none | |
+| `restore` | none | Works on archived cards |
+
+Every action answers `{ changed: [...], count }`, listing only the cards that actually changed. Errors: `400` for an empty or oversized selection, unknown ids, action or label, `404` when none of the ids match, `403` for viewers, `409` on an archived project.
+
+## Search
+
+| Method | Path | Auth | Query | Result |
+|---|---|---|---|---|
+| GET | `/api/search` | yes | `q` (2 to 60 characters) | `{ projects: [{ id, name }], cards: [{ id, title, project: { id, name }, column, snippet }] }` across projects you belong to (not archived). `snippet` shows the matching part when only the description matched |
