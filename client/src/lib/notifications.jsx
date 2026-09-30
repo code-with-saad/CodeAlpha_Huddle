@@ -20,6 +20,8 @@ export function describe(n) {
       return `${who} mentioned you in ${card}`;
     case 'comment':
       return `${who} commented on ${card}`;
+    case 'reply':
+      return `${who} replied to your comment on ${card}`;
     case 'due_soon':
       return `${card} is due soon`;
     case 'overdue':

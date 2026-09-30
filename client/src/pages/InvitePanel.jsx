@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Copy, Link2, Search, X } from 'lucide-react';
+import { Copy, Link2, Mail, Search, X } from 'lucide-react';
 import Avatar from '../components/Avatar.jsx';
 import Icon from '../components/Icon.jsx';
 import RoleBadge, { ROLE_LABEL } from '../components/RoleBadge.jsx';
@@ -20,7 +20,7 @@ async function copy(text) {
   }
 }
 
-function PersonInvite({ onInvited }) {
+function PersonInvite({ onInvited, emailInvites }) {
   const { project } = useProject();
   const roles = assignableBy(project.myRole);
   const [q, setQ] = useState('');
@@ -60,8 +60,8 @@ function PersonInvite({ onInvited }) {
     try {
       // The email path is only used when the box holds an address that matched no search result.
       const body = picked ? { username: picked.username, role } : q.includes('@') ? { email: q.trim(), role } : { username: q.trim(), role };
-      await api.post(`/projects/${project.id}/invites`, body);
-      toast.success('Invitation sent');
+      const { data } = await api.post(`/projects/${project.id}/invites`, body);
+      toast.success(data.invite.kind === 'email' ? `Invitation emailed to ${data.invite.email}` : data.emailed ? 'Invitation sent and emailed' : 'Invitation sent');
       setQ('');
       setPicked(null);
       onInvited();
@@ -134,8 +134,13 @@ function PersonInvite({ onInvited }) {
           {message}
         </p>
       )}
-      <p className="field-hint">
-        <Icon as={Search} size={12} /> Invited people see the invitation on their Projects page. No email is sent.
+      <p className="field-hint hint-line">
+        <Icon as={emailInvites ? Mail : Search} size={12} />
+        <span>
+          {emailInvites
+            ? 'People with an account see the invitation on their Projects page and get an email. Type a full email address to invite someone who does not have an account yet: they get an email with a link that works once.'
+            : 'Invited people see the invitation on their Projects page. Email invitations are not set up on this server, so use an invite link for people without an account.'}
+        </span>
       </p>
     </form>
   );
@@ -194,6 +199,12 @@ function LinkCreator({ onCreated }) {
 export default function InvitePanel() {
   const { project } = useProject();
   const [invites, setInvites] = useState(null);
+  const [emailInvites, setEmailInvites] = useState(false);
+
+  // Whether this server can send invitation emails (SMTP set up).
+  useEffect(() => {
+    api.get('/config').then(({ data }) => setEmailInvites(!!data.emailInvites)).catch(() => {});
+  }, []);
 
   const load = useCallback(async () => {
     try {
@@ -218,14 +229,14 @@ export default function InvitePanel() {
     load();
   }
 
-  const people = (invites || []).filter((i) => i.kind === 'user');
+  const people = (invites || []).filter((i) => i.kind === 'user' || i.kind === 'email');
   const links = (invites || []).filter((i) => i.kind === 'link');
 
   return (
     <>
       <h2 className="section-title">Invite people</h2>
       <div className="panel">
-        <PersonInvite onInvited={load} />
+        <PersonInvite onInvited={load} emailInvites={emailInvites} />
       </div>
 
       {people.length > 0 && (
@@ -234,10 +245,18 @@ export default function InvitePanel() {
           <ul className="rows">
             {people.map((i) => (
               <li key={i.id} className="row">
-                <Avatar user={i.invitee} size={28} />
+                {i.kind === 'email' ? (
+                  <span className="avatar avatar-initial" style={{ width: 28, height: 28 }} aria-hidden="true">
+                    <Icon as={Mail} size={14} />
+                  </span>
+                ) : (
+                  <Avatar user={i.invitee} size={28} />
+                )}
                 <div className="row-main">
-                  <span className="row-title">{i.invitee?.name}</span>
-                  <span className="row-sub">Invited {fmtDate(i.createdAt)}</span>
+                  <span className="row-title">{i.kind === 'email' ? i.email : i.invitee?.name}</span>
+                  <span className="row-sub">
+                    {i.kind === 'email' ? `Emailed ${fmtDate(i.createdAt)}, link works until ${fmtDate(i.expiresAt)}` : `Invited ${fmtDate(i.createdAt)}`}
+                  </span>
                 </div>
                 <RoleBadge role={i.role} />
                 <button type="button" className="btn btn-sm btn-ghost" onClick={() => revoke(i)}>

@@ -54,7 +54,9 @@ export default function useCard(projectId, cardId, onChange) {
       } else if (name === 'comment.updated') {
         set((d) => ({ ...d, comments: d.comments.map((c) => (c.id === e.comment.id ? e.comment : c)) }));
       } else if (name === 'comment.deleted') {
-        set((d) => ({ ...d, comments: d.comments.filter((c) => c.id !== e.commentId), card: { ...d.card, commentCount: e.card.commentCount } }));
+        // Deleting a comment also removed its replies; the event lists every id that went.
+        const gone = new Set(e.commentIds || [e.commentId]);
+        set((d) => ({ ...d, comments: d.comments.filter((c) => !gone.has(c.id)), card: { ...d.card, commentCount: e.card.commentCount } }));
       } else if (name === 'card.removed') {
         setError({ status: 404, message: 'This card was archived or does not exist.' });
       } else if (name === 'card.upsert' || name === 'card.moved') {
@@ -124,13 +126,13 @@ export default function useCard(projectId, cardId, onChange) {
     removeAttachment: (a) => run((c) => ({ ...c, attachments: c.attachments.filter((x) => x.id !== a.id), attachmentCount: c.attachmentCount - 1 }), () => api.delete(`${base}/attachments/${a.id}`)),
 
     // Posting is optimistic: a pending comment appears at once and is swapped for the saved one.
-    async postComment(body, me) {
+    async postComment(body, me, parentId = null) {
       const tempId = `tmp-${Date.now()}`;
-      const temp = { id: tempId, card: cardId, author: me.id, body, mentions: [], createdAt: new Date().toISOString(), editedAt: null, pending: true };
+      const temp = { id: tempId, card: cardId, author: me.id, parent: parentId, body, mentions: [], createdAt: new Date().toISOString(), editedAt: null, pending: true };
       set((d) => ({ ...d, comments: [...d.comments, temp], card: { ...d.card, commentCount: d.card.commentCount + 1 } }));
       changeRef.current?.(ref.current.card);
       try {
-        const { data: res } = await api.post(`${base}/comments`, { body });
+        const { data: res } = await api.post(`${base}/comments`, { body, parentId });
         set((d) => ({ ...d, comments: d.comments.map((c) => (c.id === tempId ? res.comment : c)) }));
         return true;
       } catch (err) {
@@ -152,7 +154,11 @@ export default function useCard(projectId, cardId, onChange) {
     },
     async removeComment(comment) {
       const before = ref.current;
-      set((d) => ({ ...d, comments: d.comments.filter((c) => c.id !== comment.id), card: { ...d.card, commentCount: Math.max(0, d.card.commentCount - 1) } }));
+      // A thread goes with its first comment, so its replies leave too.
+      set((d) => {
+        const kept = d.comments.filter((c) => c.id !== comment.id && c.parent !== comment.id);
+        return { ...d, comments: kept, card: { ...d.card, commentCount: Math.max(0, d.card.commentCount - (d.comments.length - kept.length)) } };
+      });
       changeRef.current?.(ref.current.card);
       try {
         await api.delete(`${base}/comments/${comment.id}`);

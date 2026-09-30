@@ -438,3 +438,30 @@
     padding-top: 0;
   }
 }
+
+/* Threads: replies sit under their comment, indented behind a hairline */
+.thread {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.replies {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-left: 14px;
+  padding-left: var(--space-4);
+  border-left: 1px solid var(--border-strong);
+}
+.reply-box {
+  padding-top: var(--space-1);
+}
+.hint-line {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+.hint-line svg {
+  flex: none;
+  margin-top: 3px;
+}

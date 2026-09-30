@@ -68,7 +68,7 @@ function Composer({ members, onSubmit, initial = '', submitLabel = 'Comment', on
           maxLength={2000}
           value={text}
           autoFocus={autoFocus}
-          placeholder="Write a comment. Use @ to mention a teammate."
+          placeholder={submitLabel === 'Reply' ? 'Write a reply' : 'Write a comment. Use @ to mention a teammate.'}
           aria-label="Comment"
           onChange={(e) => { setText(e.target.value); setCaret(e.target.selectionStart); setPick(0); }}
           onKeyUp={(e) => setCaret(e.target.selectionStart)}
@@ -106,7 +106,55 @@ function Composer({ members, onSubmit, initial = '', submitLabel = 'Comment', on
 
 export default function Comments({ comments, people, members, usernames, me, canComment, isAdmin, onPost, onEdit, onRemove }) {
   const [editing, setEditing] = useState(null);
+  const [replyTo, setReplyTo] = useState(null);
   const who = (id) => people.find((p) => p.id === id) || members.find((m) => m.user.id === id)?.user || { id, name: 'Former member', username: '', avatar: '' };
+
+  // Newest thread first; inside a thread, replies read oldest to newest. A reply whose parent is gone shows as its own thread.
+  const ids = new Set(comments.map((c) => c.id));
+  const threads = comments.filter((c) => !c.parent || !ids.has(c.parent)).reverse();
+  const repliesOf = (id) => comments.filter((c) => c.parent === id);
+
+  function Item({ c, reply = false }) {
+    const a = who(c.author);
+    const mine = c.author === me.id;
+    return (
+      <div className={`comment${reply ? ' comment-reply' : ''}${c.pending ? ' comment-pending' : ''}`}>
+        <Avatar user={a} size={reply ? 24 : 28} />
+        <div className="comment-main">
+          <div className="comment-head">
+            <strong>{a.name}</strong>
+            <span className="row-sub">
+              {c.pending ? 'Sending' : timeAgo(c.createdAt)}
+              {c.editedAt ? ', edited' : ''}
+            </span>
+          </div>
+          {editing === c.id ? (
+            <Composer members={members} initial={c.body} submitLabel="Save" autoFocus onSubmit={(body) => onEdit(c, body)} onCancel={() => setEditing(null)} />
+          ) : (
+            <Markdown text={c.body} usernames={usernames} />
+          )}
+          {!c.pending && editing !== c.id && canComment && (
+            <div className="comment-actions">
+              <button type="button" className="btn-link" // Threads are one level deep, so answering a reply opens the box under its thread.
+                onClick={() => setReplyTo(c.parent && ids.has(c.parent) ? c.parent : c.id)}>
+                Reply
+              </button>
+              {mine && (
+                <button type="button" className="btn-link" onClick={() => setEditing(c.id)}>
+                  Edit
+                </button>
+              )}
+              {(mine || isAdmin) && (
+                <button type="button" className="btn-link" onClick={() => onRemove(c)}>
+                  Delete
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <section className="sheet-section" aria-labelledby="cm-title">
@@ -117,35 +165,23 @@ export default function Comments({ comments, people, members, usernames, me, can
       {canComment && <Composer members={members} onSubmit={(body) => onPost(body)} />}
       {comments.length === 0 && <p className="row-sub">No comments yet.</p>}
       <ul className="comment-list">
-        {[...comments].reverse().map((c) => {
-          const a = who(c.author);
-          const mine = c.author === me.id;
+        {threads.map((c) => {
+          const replies = repliesOf(c.id);
           return (
-            <li key={c.id} className={`comment${c.pending ? ' comment-pending' : ''}`}>
-              <Avatar user={a} size={28} />
-              <div className="comment-main">
-                <div className="comment-head">
-                  <strong>{a.name}</strong>
-                  <span className="row-sub">{c.pending ? 'Sending' : timeAgo(c.createdAt)}{c.editedAt ? ', edited' : ''}</span>
+            <li key={c.id} className="thread">
+              <Item c={c} />
+              {(replies.length > 0 || replyTo === c.id) && (
+                <div className="replies" aria-label={`Replies to ${who(c.author).name}`}>
+                  {replies.map((r) => (
+                    <Item key={r.id} c={r} reply />
+                  ))}
+                  {replyTo === c.id && (
+                    <div className="reply-box">
+                      <Composer members={members} submitLabel="Reply" autoFocus onSubmit={(body) => onPost(body, c.id)} onCancel={() => setReplyTo(null)} />
+                    </div>
+                  )}
                 </div>
-                {editing === c.id ? (
-                  <Composer members={members} initial={c.body} submitLabel="Save" autoFocus onSubmit={(body) => onEdit(c, body)} onCancel={() => setEditing(null)} />
-                ) : (
-                  <Markdown text={c.body} usernames={usernames} />
-                )}
-                {!c.pending && editing !== c.id && (mine || isAdmin) && canComment && (
-                  <div className="comment-actions">
-                    {mine && (
-                      <button type="button" className="btn-link" onClick={() => setEditing(c.id)}>
-                        Edit
-                      </button>
-                    )}
-                    <button type="button" className="btn-link" onClick={() => onRemove(c)}>
-                      Delete
-                    </button>
-                  </div>
-                )}
-              </div>
+              )}
             </li>
           );
         })}

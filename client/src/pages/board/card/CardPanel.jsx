@@ -266,7 +266,7 @@ export default function CardPanel({ cardId, board, onClose, onCardChange, onArch
             me={me}
             canComment={canEdit}
             isAdmin={isAdmin}
-            onPost={(body) => card.postComment(body, me)}
+            onPost={(body, parentId) => card.postComment(body, me, parentId)}
             onEdit={card.editComment}
             onRemove={card.removeComment}
           />
