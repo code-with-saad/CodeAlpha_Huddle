@@ -1,7 +1,11 @@
 import Project from '../models/Project.js';
 import { OBJECT_ID } from '../middleware/project.js';
 import Card from '../models/Card.js';
+import { emitProject, emitUser } from '../services/realtime.js';
 import { createDefaultColumns } from './boardController.js';
+
+// Name, archive state and membership all live in the project the client holds, so it reloads it.
+const changed = (req) => emitProject(req.project._id, 'project.changed', {}, req.user._id);
 import { assignableBy, canManageMember, isRole } from '../utils/roles.js';
 
 const str = (v) => (typeof v === 'string' ? v.trim() : '');
@@ -72,6 +76,7 @@ export async function updateProject(req, res) {
   if (Object.keys(errors).length) return res.status(400).json({ message: 'Check the highlighted fields', errors });
   Object.assign(req.project, out);
   await req.project.save();
+  await changed(req);
   const full = await populated(Project.findById(req.project._id));
   res.json({ project: serialize(full, req.role) });
 }
@@ -79,6 +84,7 @@ export async function updateProject(req, res) {
 export const setArchived = (archive) => async (req, res) => {
   req.project.archivedAt = archive ? new Date() : null;
   await req.project.save();
+  await changed(req);
   res.json({ ok: true, archived: archive });
 };
 
@@ -105,6 +111,8 @@ export async function changeRole(req, res) {
   }
   target.role = role;
   await req.project.save();
+  await changed(req);
+  await emitUser(target.user, 'access.changed', { projectId: String(req.project._id) });
   res.json({ ok: true });
 }
 
@@ -123,6 +131,9 @@ export async function removeMember(req, res) {
   await req.project.save();
   // Someone who left can no longer be assigned to anything here.
   await Card.updateMany({ project: req.project._id, assignees: target.user }, { $pull: { assignees: target.user } });
+  await changed(req);
+  // The person removed (or leaving) must drop the project channel, so their token is re-issued without it.
+  await emitUser(target.user, 'access.changed', { removedFrom: String(req.project._id) });
   res.json({ ok: true });
 }
 
@@ -134,5 +145,7 @@ export async function transferOwnership(req, res) {
   target.role = 'owner';
   current.role = 'admin';
   await req.project.save();
+  await changed(req);
+  await emitUser(target.user, 'access.changed', { projectId: String(req.project._id) });
   res.json({ ok: true });
 }

@@ -17,9 +17,11 @@ export function serializeCard(c) {
   };
 }
 
-export function serializeCardDetail(c) {
+export function serializeCardDetail(c, viewerId) {
   return {
     ...serializeCard(c),
+    watching: viewerId ? (c.watchers || []).some((w) => String(w) === String(viewerId)) : false,
+    watcherCount: (c.watchers || []).length,
     description: c.description,
     createdBy: String(c.createdBy),
     checklistItems: (c.checklist || []).map((i) => ({ id: i._id, text: i.text, done: i.done })),

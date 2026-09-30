@@ -3,6 +3,7 @@ import Column from '../models/Column.js';
 import Label from '../models/Label.js';
 import { OBJECT_ID } from '../middleware/project.js';
 import { STEP, endPosition, placeAt } from '../utils/order.js';
+import { emitProject } from '../services/realtime.js';
 import { serializeCard, serializeLabel } from '../utils/serialize.js';
 
 const MAX_COLUMNS = 30;
@@ -10,6 +11,9 @@ const MAX_CARDS = 1000; // active cards per project, keeps the free database com
 
 const str = (v) => (typeof v === 'string' ? v.trim() : '');
 const int = (v) => (Number.isInteger(v) ? v : null);
+
+// Column and label changes are rare and touch several things, so other browsers simply reload the board.
+const reload = (req) => emitProject(req.project._id, 'board.reload', {}, req.user._id);
 
 export const DEFAULT_COLUMNS = ['To Do', 'In Progress', 'Done'];
 
@@ -64,6 +68,7 @@ export async function createColumn(req, res) {
   const filter = { project: req.project._id, archivedAt: null };
   if ((await Column.countDocuments(filter)) >= MAX_COLUMNS) return res.status(409).json({ message: `A project can have up to ${MAX_COLUMNS} columns` });
   const column = await Column.create({ project: req.project._id, name, position: await endPosition(Column, filter) });
+  await reload(req);
   res.status(201).json({ column: serializeColumn(column) });
 }
 
@@ -81,6 +86,7 @@ export async function updateColumn(req, res) {
     column.position = await placeAt(Column, { project: req.project._id, archivedAt: null }, column._id, index);
   }
   await column.save();
+  await reload(req);
   res.json({ column: serializeColumn(column) });
 }
 
@@ -110,6 +116,7 @@ export async function deleteColumn(req, res) {
   }
   column.archivedAt = new Date();
   await column.save();
+  await reload(req);
   res.json({ ok: true });
 }
 
@@ -125,8 +132,11 @@ export async function createCard(req, res) {
   }
   const filter = { column: column._id, archivedAt: null };
   const index = int(req.body.index);
-  const position = index === null ? await endPosition(Card, filter) : await placeAt(Card, filter, null, index);
-  const card = await Card.create({ project: req.project._id, column: column._id, title, position, createdBy: req.user._id });
+  const state = {};
+  const position = index === null ? await endPosition(Card, filter) : await placeAt(Card, filter, null, index, state);
+  const card = await Card.create({ project: req.project._id, column: column._id, title, position, createdBy: req.user._id, watchers: [req.user._id] });
+  if (state.renumbered) await reload(req);
+  else await emitProject(req.project._id, 'card.upsert', { card: serializeCard(card) }, req.user._id);
   res.status(201).json({ card: serializeCard(card) });
 }
 
@@ -137,10 +147,15 @@ export async function moveCard(req, res) {
   if (!column) return;
   const index = int(req.body.index);
   if (index === null || index < 0) return res.status(400).json({ message: 'Invalid position' });
+  const state = {};
   card.column = column._id;
-  card.position = await placeAt(Card, { column: column._id, archivedAt: null }, card._id, index);
+  card.position = await placeAt(Card, { column: column._id, archivedAt: null }, card._id, index, state);
   await card.save();
-  res.json({ card: serializeCard(card) });
+  // Final index in the column, so other browsers can place the card without knowing our positions.
+  const at = await Card.countDocuments({ column: column._id, archivedAt: null, _id: { $ne: card._id }, position: { $lt: card.position } });
+  if (state.renumbered) await reload(req);
+  else await emitProject(req.project._id, 'card.moved', { card: serializeCard(card), index: at }, req.user._id);
+  res.json({ card: serializeCard(card), index: at });
 }
 
 export async function archiveCard(req, res) {
@@ -148,5 +163,6 @@ export async function archiveCard(req, res) {
   if (!card) return;
   card.archivedAt = new Date();
   await card.save();
+  await emitProject(req.project._id, 'card.removed', { cardId: String(card._id) }, req.user._id);
   res.json({ ok: true });
 }

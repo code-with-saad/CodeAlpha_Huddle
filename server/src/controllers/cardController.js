@@ -4,8 +4,11 @@ import Comment from '../models/Comment.js';
 import Label from '../models/Label.js';
 import User from '../models/User.js';
 import { OBJECT_ID } from '../middleware/project.js';
+import { notify } from '../services/notify.js';
+import { emitProject } from '../services/realtime.js';
+import { mentionedMemberIds } from '../utils/mentions.js';
 import { atLeast } from '../utils/roles.js';
-import { serializeCardDetail, serializeComment } from '../utils/serialize.js';
+import { serializeCard, serializeCardDetail, serializeComment } from '../utils/serialize.js';
 
 const str = (v) => (typeof v === 'string' ? v.trim() : '');
 const bad = (res, errors) => res.status(400).json({ message: 'Check the highlighted fields', errors });
@@ -37,14 +40,26 @@ async function peopleFor(card, comments) {
   return users.map((u) => u.toPublic());
 }
 
-async function detail(card) {
+async function detail(card, userId) {
   const comments = await Comment.find({ card: card._id }).sort({ createdAt: 1 }).limit(300);
-  return { card: serializeCardDetail(card), comments: comments.map(serializeComment), people: await peopleFor(card, comments) };
+  return { card: serializeCardDetail(card, userId), comments: comments.map(serializeComment), people: await peopleFor(card, comments) };
+}
+
+// Tells everyone looking at the board that this card changed.
+const announce = (req, card) => emitProject(req.project._id, 'card.upsert', { card: serializeCard(card) }, req.user._id);
+
+// Saves, publishes the change, runs `after` (notifications) and only then answers. On Vercel the function
+// can freeze once the response is sent, so everything that must happen has to finish first.
+async function finish(req, res, card, status = 200, after = null) {
+  await card.save();
+  await announce(req, card);
+  if (after) await after();
+  res.status(status).json(await detail(card, req.user._id));
 }
 
 export async function getCard(req, res) {
   const card = await loadCard(req, res);
-  if (card) res.json(await detail(card));
+  if (card) res.json(await detail(card, req.user._id));
 }
 
 export async function updateCard(req, res) {
@@ -52,6 +67,8 @@ export async function updateCard(req, res) {
   if (!card) return;
   const b = req.body;
   const errors = {};
+  const oldAssignees = card.assignees.map(String);
+  const oldDescription = card.description;
 
   if (b.title !== undefined) {
     const title = str(b.title);
@@ -88,9 +105,36 @@ export async function updateCard(req, res) {
     else card.labels = ids;
   }
   if (Object.keys(errors).length) return bad(res, errors);
-  await card.save();
-  res.json(await detail(card));
+
+  // Who is newly assigned, and who is newly mentioned in the description. Both start following the card.
+  const newlyAssigned = card.assignees.map(String).filter((id) => !oldAssignees.includes(id));
+  let newlyMentioned = [];
+  if (card.description !== oldDescription) {
+    const [now, before] = await Promise.all([mentionedMemberIds(card.description, req.project), mentionedMemberIds(oldDescription, req.project)]);
+    const had = new Set(before.map(String));
+    newlyMentioned = now.filter((id) => !had.has(String(id)));
+  }
+  card.watchers.addToSet(...newlyAssigned, ...newlyMentioned);
+
+  const ctx = { actor: req.user, project: req.project, card };
+  await finish(req, res, card, 200, () =>
+    Promise.all([
+      notify(newlyAssigned, { ...ctx, type: 'assigned', snippet: 'Assigned you to this card' }),
+      notify(newlyMentioned, { ...ctx, type: 'mentioned', snippet: 'Mentioned you in the description' }),
+    ])
+  );
 }
+
+// ---- Watching: a person following a card gets its notifications ----
+
+export const setWatching = (on) => async (req, res) => {
+  const card = await loadCard(req, res);
+  if (!card) return;
+  if (on) card.watchers.addToSet(req.user._id);
+  else card.watchers.pull(req.user._id);
+  await card.save();
+  res.json(await detail(card, req.user._id));
+};
 
 // ---- Checklist ----
 
@@ -101,8 +145,7 @@ export async function addChecklistItem(req, res) {
   if (!text || text.length > 200) return bad(res, { text: 'Enter text up to 200 characters' });
   if (card.checklist.length >= MAX_CHECKLIST) return res.status(409).json({ message: `A checklist can hold ${MAX_CHECKLIST} items` });
   card.checklist.push({ text });
-  await card.save();
-  res.status(201).json(await detail(card));
+  await finish(req, res, card, 201);
 }
 
 export async function updateChecklistItem(req, res) {
@@ -116,8 +159,7 @@ export async function updateChecklistItem(req, res) {
     item.text = text;
   }
   if (req.body.done !== undefined) item.done = req.body.done === true;
-  await card.save();
-  res.json(await detail(card));
+  await finish(req, res, card);
 }
 
 export async function deleteChecklistItem(req, res) {
@@ -126,8 +168,7 @@ export async function deleteChecklistItem(req, res) {
   const item = OBJECT_ID.test(req.params.itemId) ? card.checklist.id(req.params.itemId) : null;
   if (!item) return res.status(404).json({ message: 'Item not found' });
   item.deleteOne();
-  await card.save();
-  res.json(await detail(card));
+  await finish(req, res, card);
 }
 
 // ---- Attachments (files live in Cloudinary; only the reference is stored here) ----
@@ -153,8 +194,7 @@ export async function addAttachment(req, res) {
   if (card.attachments.length >= MAX_ATTACHMENTS) return res.status(409).json({ message: `A card can hold ${MAX_ATTACHMENTS} attachments` });
 
   card.attachments.push({ url, name: str(name), size, mime, publicId, resourceType, uploadedBy: req.user._id });
-  await card.save();
-  res.status(201).json(await detail(card));
+  await finish(req, res, card, 201);
 }
 
 // Best effort: a failure here leaves an orphan file in Cloudinary but never blocks the user.
@@ -178,7 +218,5 @@ export async function deleteAttachment(req, res) {
   if (!a.uploadedBy.equals(req.user._id) && !atLeast(req.role, 'admin')) return res.status(403).json({ message: 'You can only remove files you added' });
   const copy = { publicId: a.publicId, resourceType: a.resourceType };
   a.deleteOne();
-  await card.save();
-  await destroyRemote(copy);
-  res.json(await detail(card));
+  await finish(req, res, card, 200, () => destroyRemote(copy));
 }

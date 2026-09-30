@@ -9,6 +9,7 @@ import uploadRoutes from './routes/uploads.js';
 import projectRoutes from './routes/projects.js';
 import inviteRoutes from './routes/invites.js';
 import boardRoutes from './routes/board.js';
+import notificationRoutes from './routes/notifications.js';
 
 // Refuse to run with a missing or weak signing secret: every token depends on it.
 if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) {
@@ -51,6 +52,7 @@ app.use('/api/uploads', uploadRoutes);
 app.use('/api/projects', projectRoutes);
 app.use('/api/projects', boardRoutes);
 app.use('/api', inviteRoutes);
+app.use('/api', notificationRoutes);
 
 app.use((_req, res) => res.status(404).json({ message: 'Not found' }));
 

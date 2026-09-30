@@ -3,6 +3,8 @@ import Invite from '../models/Invite.js';
 import Project from '../models/Project.js';
 import User from '../models/User.js';
 import { OBJECT_ID } from '../middleware/project.js';
+import { notify } from '../services/notify.js';
+import { emitProject, emitUser } from '../services/realtime.js';
 import { assignableBy } from '../utils/roles.js';
 
 const str = (v) => (typeof v === 'string' ? v.trim() : '');
@@ -17,6 +19,12 @@ async function addMember(projectId, userId, role) {
     { $push: { members: { user: userId, role, joinedAt: new Date() } } }
   );
   return res.modifiedCount === 1;
+}
+
+// Someone joined: open boards show the new member, and their own tab gets access to the project channel.
+async function joined(projectId, userId) {
+  await emitProject(projectId, 'project.changed', {}, userId);
+  await emitUser(userId, 'access.changed', { projectId: String(projectId) });
 }
 
 const serializeInvite = (i) => ({
@@ -66,6 +74,8 @@ export async function createUserInvite(req, res) {
 
   const invite = await Invite.create({ project: req.project._id, kind: 'user', invitee: user._id, role, createdBy: req.user._id });
   await invite.populate([{ path: 'invitee', select: 'username name avatar' }, { path: 'createdBy', select: 'username name avatar' }]);
+  await notify([user._id], { type: 'invited', actor: req.user, project: req.project, snippet: `Invited you as ${role}` });
+  await emitUser(user._id, 'invites.changed');
   res.status(201).json({ invite: serializeInvite(invite) });
 }
 
@@ -95,6 +105,7 @@ export async function revokeInvite(req, res) {
     { status: 'revoked' }
   );
   if (!invite) return res.status(404).json({ message: 'Invite not found' });
+  if (invite.invitee) await emitUser(invite.invitee, 'invites.changed');
   res.json({ ok: true });
 }
 
@@ -128,9 +139,10 @@ export const respondToInvite = (action) => async (req, res) => {
     await invite.save();
     return res.json({ ok: true });
   }
-  await addMember(invite.project, req.user._id, invite.role);
+  const added = await addMember(invite.project, req.user._id, invite.role);
   invite.status = 'accepted';
   await invite.save();
+  if (added) await joined(invite.project, req.user._id);
   res.json({ ok: true, projectId: invite.project });
 };
 
@@ -157,6 +169,7 @@ export async function joinLink(req, res) {
   // Someone who is already in keeps their current role; a link never changes it.
   if (await addMember(invite.project._id, req.user._id, invite.role)) {
     await Invite.updateOne({ _id: invite._id }, { $inc: { uses: 1 } });
+    await joined(invite.project._id, req.user._id);
   }
   res.json({ ok: true, projectId: invite.project._id });
 }

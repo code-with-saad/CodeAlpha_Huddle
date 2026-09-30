@@ -41,6 +41,8 @@ const cardSchema = new mongoose.Schema(
     checklist: { type: [checklistItem], default: [] },
     attachments: { type: [attachment], default: [] },
     commentCount: { type: Number, default: 0 },
+    // People following the card: they get notified about comments. Creator, assignees, commenters and mentioned people join automatically.
+    watchers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
 
     // Soft delete. archivedWithColumn lets a restored column bring its cards back.
     archivedAt: { type: Date, default: null },
@@ -51,5 +53,8 @@ const cardSchema = new mongoose.Schema(
 
 cardSchema.index({ project: 1, archivedAt: 1 });
 cardSchema.index({ column: 1, archivedAt: 1, position: 1 });
+// Used by the lazy due date notifications.
+cardSchema.index({ assignees: 1, dueDate: 1 });
+cardSchema.index({ watchers: 1, dueDate: 1 });
 
 export default mongoose.models.Card || mongoose.model('Card', cardSchema);

@@ -1,9 +1,11 @@
 import Card from '../models/Card.js';
 import Label from '../models/Label.js';
 import { OBJECT_ID } from '../middleware/project.js';
+import { emitProject } from '../services/realtime.js';
 import { serializeLabel } from '../utils/serialize.js';
 
 const MAX_LABELS = 30;
+const reload = (req) => emitProject(req.project._id, 'board.reload', {}, req.user._id);
 const str = (v) => (typeof v === 'string' ? v.trim() : '');
 const COLOR_RE = /^#[0-9a-f]{6}$/i;
 
@@ -27,6 +29,7 @@ export async function createLabel(req, res) {
   if (Object.keys(errors).length) return res.status(400).json({ message: 'Check the highlighted fields', errors });
   if ((await Label.countDocuments({ project: req.project._id })) >= MAX_LABELS) return res.status(409).json({ message: `A project can have up to ${MAX_LABELS} labels` });
   const label = await Label.create({ ...out, project: req.project._id });
+  await reload(req);
   res.status(201).json({ label: serializeLabel(label) });
 }
 
@@ -44,6 +47,7 @@ export async function updateLabel(req, res) {
   if (Object.keys(errors).length) return res.status(400).json({ message: 'Check the highlighted fields', errors });
   Object.assign(label, out);
   await label.save();
+  await reload(req);
   res.json({ label: serializeLabel(label) });
 }
 
@@ -53,5 +57,6 @@ export async function deleteLabel(req, res) {
   if (!label) return;
   await Card.updateMany({ project: req.project._id, labels: label._id }, { $pull: { labels: label._id } });
   await label.deleteOne();
+  await reload(req);
   res.json({ ok: true });
 }

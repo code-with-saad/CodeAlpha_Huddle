@@ -15,6 +15,7 @@ import {
   deleteAttachment,
   deleteChecklistItem,
   getCard,
+  setWatching,
   updateCard,
   updateChecklistItem,
 } from '../controllers/cardController.js';
@@ -37,6 +38,9 @@ router.delete('/:id/columns/:columnId', admin, deleteColumn);
 
 router.post('/:id/cards', member, createCard);
 router.get('/:id/cards/:cardId', read, getCard);
+// Following a card is not an edit, so viewers can do it too.
+router.post('/:id/cards/:cardId/watch', [requireAuth, writeLimiter, loadProject()], setWatching(true));
+router.delete('/:id/cards/:cardId/watch', [requireAuth, writeLimiter, loadProject()], setWatching(false));
 router.patch('/:id/cards/:cardId', member, updateCard);
 router.post('/:id/cards/:cardId/move', member, moveCard);
 router.delete('/:id/cards/:cardId', member, archiveCard);

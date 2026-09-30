@@ -15,13 +15,15 @@ export function positionFor(others, index) {
 }
 
 // Position for `movedId` when placed at `index` among the other active items matching `filter`.
-export async function placeAt(Model, filter, movedId, index) {
+// `state.renumbered` is set when neighbours were renumbered, which other clients must reload for.
+export async function placeAt(Model, filter, movedId, index, state = {}) {
   const load = () => Model.find({ ...filter, _id: { $ne: movedId } }).sort({ position: 1 }).select('position');
   let others = await load();
   const i = Math.max(0, Math.min(index, others.length));
   if (i > 0 && i < others.length && others[i].position - others[i - 1].position < MIN_GAP) {
     await Model.bulkWrite(others.map((o, k) => ({ updateOne: { filter: { _id: o._id }, update: { position: STEP * (k + 1) } } })));
     others = await load();
+    state.renumbered = true;
   }
   return positionFor(others, i);
 }
