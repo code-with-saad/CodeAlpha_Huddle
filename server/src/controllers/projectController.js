@@ -54,6 +54,8 @@ export async function createProject(req, res) {
 
   const project = await Project.create({ ...out, members: [{ user: req.user._id, role: 'owner' }] });
   await createDefaultColumns(project._id);
+  // The creator's realtime token predates this project, so it must be re-issued to include its channel.
+  await emitUser(req.user._id, 'access.changed', { projectId: String(project._id) });
   const full = await populated(Project.findById(project._id));
   res.status(201).json({ project: serialize(full, 'owner') });
 }

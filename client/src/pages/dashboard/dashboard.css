@@ -197,16 +197,18 @@
   /* Rounded at the data end, square on the baseline. */
   border-radius: 0 4px 4px 0;
 }
-.stack {
+/* Named barstack, not stack: .stack is the column layout used by forms. */
+.barstack {
   display: flex;
+  flex-direction: row;
   gap: 2px;
   height: 16px;
 }
-.stack .bar {
+.barstack .bar {
   min-width: 4px;
   border-radius: 0;
 }
-.stack .bar:last-child {
+.barstack .bar:last-child {
   border-radius: 0 4px 4px 0;
 }
 .bar-accent {
@@ -394,4 +396,15 @@
     grid-column: 1 / -1;
     grid-row: 2;
   }
+}
+
+/* .row-sub is nowrap for list rows; paragraphs in the dashboard must wrap. */
+.dash-card p.row-sub,
+.dash-foot {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+}
+.dash-head > div:first-child {
+  min-width: 0;
 }

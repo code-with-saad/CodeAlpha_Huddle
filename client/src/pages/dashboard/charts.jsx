@@ -39,7 +39,7 @@ export function StackedList({ rows, label }) {
               <span className="bar-name">{r.label}</span>
             </span>
             <span className="bar-track" aria-hidden="true">
-              <span className="stack" style={{ width: total ? `max(4px, ${(total / max) * 100}%)` : 0 }}>
+              <span className="barstack" style={{ width: total ? `max(4px, ${(total / max) * 100}%)` : 0 }}>
                 {r.open > 0 && <span className="bar bar-accent stack-open" style={{ flex: r.open }} />}
                 {r.done > 0 && <span className="bar bar-success stack-done" style={{ flex: r.done }} />}
               </span>

@@ -7,6 +7,7 @@ import Icon from '../components/Icon.jsx';
 import RoleBadge from '../components/RoleBadge.jsx';
 import { api, errorMessage, fieldErrors } from '../lib/api.js';
 import { on } from '../lib/bus.js';
+import { refreshAccess } from '../lib/realtime.js';
 import { toast } from '../lib/toast.js';
 
 function NewProjectDialog({ onClose }) {
@@ -22,6 +23,8 @@ function NewProjectDialog({ onClose }) {
     setFields({});
     try {
       const { data } = await api.post('/projects', form);
+      // Get a token that includes the new project's channel before its board opens.
+      await Promise.race([refreshAccess(), new Promise((r) => setTimeout(r, 2500))]);
       navigate(`/p/${data.project.id}`);
     } catch (err) {
       setFields(fieldErrors(err));

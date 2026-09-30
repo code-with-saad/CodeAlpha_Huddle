@@ -71,15 +71,15 @@ A project is `{ id, name, description, archived, myRole, createdAt, members: [{ 
 
 Columns are managed by admins and above. Cards are managed by members and above. Any member, including viewers, can read the board. Writes to an archived project return `409`.
 
-A column is `{ id, name, position }`. Lists come back sorted by `position`.
+A column is `{ id, name, position, isDone }`. `isDone` means tasks in it count as done. Lists come back sorted by `position`.
 
-A card on the board (its "face") is `{ id, column, title, position, createdAt, priority, dueDate, assignees, labels, checklist: { total, done }, commentCount, attachmentCount }`. `dueDate` is `YYYY-MM-DD` or null; `assignees` are user ids; `labels` are label ids. The board response also includes `labels: [{ id, name, color }]`.
+A card on the board (its "face") is `{ id, column, title, position, createdAt, priority, dueDate, assignees, labels, checklist: { total, done }, commentCount, attachmentCount }`. `done` and `completedAt` say whether the task is completed and when; `dueDate` is `YYYY-MM-DD` or null; `assignees` are user ids; `labels` are label ids. The board response also includes `labels: [{ id, name, color }]`.
 
 | Method | Path | Min role | Body | Result |
 |---|---|---|---|---|
 | GET | `/api/projects/:id/board` | viewer | none | `{ columns, cards, labels }`, active items only |
 | POST | `/api/projects/:id/columns` | admin | `name` (up to 40) | `201 { column }`, added at the end. `409` at 30 columns |
-| PATCH | `/api/projects/:id/columns/:columnId` | admin | `name?`, `index?` (final position among columns) | `{ column }` |
+| PATCH | `/api/projects/:id/columns/:columnId` | admin | `name?`, `index?` (final position among columns), `isDone?` (boolean; completes or reopens the tasks in the column) | `{ column }` |
 | DELETE | `/api/projects/:id/columns/:columnId` | admin | query `moveTo=<columnId>` or `archiveCards=1` | `{ ok }`. `409` with `cardCount` if it has cards and neither option is given, and `409` for the last column |
 | POST | `/api/projects/:id/cards` | member | `columnId`, `title` (up to 200), `index?` (default end) | `201 { card }`. `409` at 1000 active cards |
 | POST | `/api/projects/:id/cards/:cardId/move` | member | `columnId`, `index` (final position in that column, clamped to the end) | `{ card }` |
@@ -194,3 +194,23 @@ Every action answers `{ changed: [...], count }`, listing only the cards that ac
 | Method | Path | Auth | Query | Result |
 |---|---|---|---|---|
 | GET | `/api/search` | yes | `q` (2 to 60 characters) | `{ projects: [{ id, name }], cards: [{ id, title, project: { id, name }, column, snippet }] }` across projects you belong to (not archived). `snippet` shows the matching part when only the description matched |
+
+## Dashboard
+
+`GET /api/projects/:id/dashboard?days=7|30|90` (viewer). Any other `days` value means 30. Days are UTC calendar days.
+
+```
+{
+  days,
+  totals: { open, done, overdue, dueSoon, unassigned, completedInRange, createdInRange, completionRate },
+  byColumn:   [{ id, name, isDone, count }],            // board order, active tasks
+  byAssignee: [{ userId, open, done }],                 // every member
+  unassigned: { open, done },
+  byPriority: [{ priority, count }],                    // open tasks, urgent to none
+  series:     [{ date, created, completed }],           // one entry per day, oldest first
+  overdue:    [{ id, title, dueDate, assignees, priority }],   // open tasks, oldest first, up to 8
+  dueSoon:    [{ id, title, dueDate, assignees, priority }]    // due today through 7 days, up to 8
+}
+```
+
+Overdue and due soon count open tasks only. `series` includes tasks archived since, so history does not disappear; the totals cover active tasks.

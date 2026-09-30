@@ -44,7 +44,12 @@ export function stopRealtime() {
 // Channels the person may no longer read are detached by Ably itself.
 export async function refreshAccess() {
   const c = await startRealtime().catch(() => null);
-  if (c) await c.auth.authorize().catch(() => {});
+  if (!c) return;
+  await c.auth.authorize().catch(() => {});
+  // A channel opened before the new token existed was refused and stays failed until it is attached again.
+  for (const e of channels.values()) {
+    if (e.channel && ['failed', 'detached', 'suspended'].includes(e.channel.state)) e.channel.attach().catch(() => {});
+  }
 }
 
 function entry(name) {
