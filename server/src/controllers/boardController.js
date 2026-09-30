@@ -1,7 +1,9 @@
 import Card from '../models/Card.js';
 import Column from '../models/Column.js';
+import Label from '../models/Label.js';
 import { OBJECT_ID } from '../middleware/project.js';
 import { STEP, endPosition, placeAt } from '../utils/order.js';
+import { serializeCard, serializeLabel } from '../utils/serialize.js';
 
 const MAX_COLUMNS = 30;
 const MAX_CARDS = 1000; // active cards per project, keeps the free database comfortable
@@ -16,14 +18,14 @@ export function createDefaultColumns(projectId) {
 }
 
 const serializeColumn = (c) => ({ id: c._id, name: c.name, position: c.position });
-export const serializeCard = (c) => ({ id: c._id, column: c.column, title: c.title, position: c.position, createdAt: c.createdAt });
 
 export async function getBoard(req, res) {
-  const [columns, cards] = await Promise.all([
+  const [columns, cards, labels] = await Promise.all([
     Column.find({ project: req.project._id, archivedAt: null }).sort({ position: 1 }),
     Card.find({ project: req.project._id, archivedAt: null }).sort({ position: 1 }),
+    Label.find({ project: req.project._id }).sort({ name: 1 }),
   ]);
-  res.json({ columns: columns.map(serializeColumn), cards: cards.map(serializeCard) });
+  res.json({ columns: columns.map(serializeColumn), cards: cards.map(serializeCard), labels: labels.map(serializeLabel) });
 }
 
 // Loads a column of this project or answers 404. Returns null when it already responded.
@@ -126,18 +128,6 @@ export async function createCard(req, res) {
   const position = index === null ? await endPosition(Card, filter) : await placeAt(Card, filter, null, index);
   const card = await Card.create({ project: req.project._id, column: column._id, title, position, createdBy: req.user._id });
   res.status(201).json({ card: serializeCard(card) });
-}
-
-export async function updateCard(req, res) {
-  const card = await findCard(req, res);
-  if (!card) return;
-  if (req.body.title !== undefined) {
-    const title = str(req.body.title);
-    if (!validTitle(res, title)) return;
-    card.title = title;
-  }
-  await card.save();
-  res.json({ card: serializeCard(card) });
 }
 
 export async function moveCard(req, res) {

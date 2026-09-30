@@ -7,9 +7,19 @@ import {
   deleteColumn,
   getBoard,
   moveCard,
-  updateCard,
   updateColumn,
 } from '../controllers/boardController.js';
+import {
+  addAttachment,
+  addChecklistItem,
+  deleteAttachment,
+  deleteChecklistItem,
+  getCard,
+  updateCard,
+  updateChecklistItem,
+} from '../controllers/cardController.js';
+import { addComment, deleteComment, editComment } from '../controllers/commentController.js';
+import { createLabel, deleteLabel, updateLabel } from '../controllers/labelController.js';
 import { requireAuth } from '../middleware/auth.js';
 import { loadProject, requireRole } from '../middleware/project.js';
 
@@ -26,8 +36,25 @@ router.patch('/:id/columns/:columnId', admin, updateColumn);
 router.delete('/:id/columns/:columnId', admin, deleteColumn);
 
 router.post('/:id/cards', member, createCard);
+router.get('/:id/cards/:cardId', read, getCard);
 router.patch('/:id/cards/:cardId', member, updateCard);
 router.post('/:id/cards/:cardId/move', member, moveCard);
 router.delete('/:id/cards/:cardId', member, archiveCard);
+
+router.post('/:id/cards/:cardId/checklist', member, addChecklistItem);
+router.patch('/:id/cards/:cardId/checklist/:itemId', member, updateChecklistItem);
+router.delete('/:id/cards/:cardId/checklist/:itemId', member, deleteChecklistItem);
+
+router.post('/:id/cards/:cardId/attachments', member, addAttachment);
+router.delete('/:id/cards/:cardId/attachments/:attachmentId', member, deleteAttachment);
+
+router.post('/:id/cards/:cardId/comments', member, addComment);
+router.patch('/:id/cards/:cardId/comments/:commentId', member, editComment);
+router.delete('/:id/cards/:cardId/comments/:commentId', member, deleteComment);
+
+// Members can create labels; changing or deleting one affects everyone, so that needs an admin.
+router.post('/:id/labels', member, createLabel);
+router.patch('/:id/labels/:labelId', admin, updateLabel);
+router.delete('/:id/labels/:labelId', admin, deleteLabel);
 
 export default router;

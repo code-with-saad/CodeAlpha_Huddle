@@ -1,5 +1,6 @@
 import Project from '../models/Project.js';
 import { OBJECT_ID } from '../middleware/project.js';
+import Card from '../models/Card.js';
 import { createDefaultColumns } from './boardController.js';
 import { assignableBy, canManageMember, isRole } from '../utils/roles.js';
 
@@ -120,6 +121,8 @@ export async function removeMember(req, res) {
   }
   req.project.members = req.project.members.filter((m) => !m.user.equals(target.user));
   await req.project.save();
+  // Someone who left can no longer be assigned to anything here.
+  await Card.updateMany({ project: req.project._id, assignees: target.user }, { $pull: { assignees: target.user } });
   res.json({ ok: true });
 }
 
