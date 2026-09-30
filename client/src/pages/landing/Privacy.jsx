@@ -20,6 +20,9 @@ export default function Privacy() {
         <strong>In your browser.</strong> Huddle stores your sign-in token and your theme choice in your browser's local storage so you stay signed in and keep your theme. It does not use cookies, analytics, advertising or tracking tools.
       </p>
       <p>
+        <strong>The contact form.</strong> If you write to us through the contact page, your name, email address and message are emailed to us. We do not store them in the database.
+      </p>
+      <p>
         <strong>Technical data.</strong> Like any website, our hosting provider receives your IP address and basic request details when you use Huddle and may keep standard server logs. Our own code uses your IP address only to limit repeated requests, such as many failed logins.
       </p>
 
@@ -73,8 +76,8 @@ export default function Privacy() {
             </tr>
             <tr>
               <td>Google (Gmail)</td>
-              <td>Sends invitation emails</td>
-              <td>The recipient's address and the invitation text, which names the person who invited them and the project</td>
+              <td>Sends invitation emails and delivers contact form messages</td>
+              <td>The recipient's address and the invitation text, which names the person who invited them and the project; the name, address and message from the contact form</td>
             </tr>
           </tbody>
         </table>

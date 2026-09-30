@@ -1,5 +1,7 @@
 import { Link, Navigate, Route, Routes } from 'react-router-dom';
 import Landing from './pages/landing/Landing.jsx';
+import About from './pages/landing/About.jsx';
+import Contact from './pages/landing/Contact.jsx';
 import Terms from './pages/landing/Terms.jsx';
 import Privacy from './pages/landing/Privacy.jsx';
 import { useAuth } from './lib/auth.jsx';
@@ -49,6 +51,8 @@ export default function App() {
   return (
     <Routes>
       <Route path="/" element={<Home />} />
+      <Route path="about" element={<About />} />
+      <Route path="contact" element={<Contact />} />
       <Route path="terms" element={<Terms />} />
       <Route path="privacy" element={<Privacy />} />
       <Route path="login" element={<AuthPage mode="login" />} />

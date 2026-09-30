@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { api, onUnauthorized, tokenStore } from './api';
+import { toast } from './toast.js';
 
 const AuthContext = createContext(null);
 
@@ -18,9 +19,18 @@ export function AuthProvider({ children }) {
     tokenStore.set(data.token);
     setUser(data.user);
     setStatus('in');
+    return data.user;
   }, []);
 
-  useEffect(() => onUnauthorized(logout), [logout]);
+  // A rejected token while signed in means the session ended (another device changed the password, or it expired).
+  useEffect(
+    () =>
+      onUnauthorized(() => {
+        if (tokenStore.get()) toast.warning('Your session ended. Please log in again.');
+        logout();
+      }),
+    [logout]
+  );
 
   useEffect(() => {
     if (!tokenStore.get()) return;

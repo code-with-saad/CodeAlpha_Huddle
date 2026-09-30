@@ -30,13 +30,13 @@ export const appUrl = () => (process.env.APP_URL || (process.env.CLIENT_URL || '
 export const escapeHtml = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 
 // Sends one message. Throws when the mail server refuses or times out, so the caller can say so.
-export async function sendMail({ to, subject, text, html }) {
+export async function sendMail({ to, subject, text, html, replyTo }) {
   if (dry()) {
-    fs.appendFileSync(new URL('../../mail-outbox.log', import.meta.url), `${JSON.stringify({ to, subject, text, html, at: new Date().toISOString() })}\n`);
+    fs.appendFileSync(new URL('../../mail-outbox.log', import.meta.url), `${JSON.stringify({ to, subject, text, html, replyTo, at: new Date().toISOString() })}\n`);
     return;
   }
   const name = (process.env.SMTP_FROM_NAME || 'Huddle').replace(/["<>\r\n]/g, '');
-  await getTransport().sendMail({ from: `"${name}" <${process.env.SMTP_USER}>`, to, subject, text, html });
+  await getTransport().sendMail({ from: `"${name}" <${process.env.SMTP_USER}>`, to, subject, text, html, replyTo });
 }
 
 export function inviteEmail({ inviter, project, role, url, expires }) {

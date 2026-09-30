@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import { Camera, LogOut } from 'lucide-react';
 import Avatar from '../components/Avatar.jsx';
 import Icon from '../components/Icon.jsx';
+import PasswordInput from '../components/PasswordInput.jsx';
 import { useAuth } from '../lib/auth.jsx';
 import { errorMessage, fieldErrors } from '../lib/api.js';
 import { uploadImage, validateImage } from '../lib/cloudinary.js';
@@ -70,7 +71,14 @@ export default function ProfilePage() {
     <div className="profile">
       <div className="page-head">
         <h1>Profile</h1>
-        <button type="button" className="btn" onClick={logout}>
+        <button
+          type="button"
+          className="btn"
+          onClick={() => {
+            logout();
+            toast.info('You have been logged out.');
+          }}
+        >
           <Icon as={LogOut} />
           Log out
         </button>
@@ -135,9 +143,7 @@ export default function ProfilePage() {
           <input type="text" name="username" value={user.username} autoComplete="username" readOnly hidden />
           <label className="field">
             <span className="field-label">Current password</span>
-            <input
-              className="input"
-              type="password"
+            <PasswordInput
               autoComplete="current-password"
               value={pw.currentPassword}
               onChange={(e) => setPw((p) => ({ ...p, currentPassword: e.target.value }))}
@@ -147,9 +153,7 @@ export default function ProfilePage() {
           </label>
           <label className="field">
             <span className="field-label">New password</span>
-            <input
-              className="input"
-              type="password"
+            <PasswordInput
               autoComplete="new-password"
               value={pw.newPassword}
               onChange={(e) => setPw((p) => ({ ...p, newPassword: e.target.value }))}

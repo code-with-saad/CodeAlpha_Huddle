@@ -1,4 +1,5 @@
-import { Link } from 'react-router-dom';
+import { useEffect } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { SiteFooter, SiteHeader, useTitle } from './SiteChrome.jsx';
 import './landing.css';
 
@@ -27,6 +28,11 @@ function Feature({ id, title, reverse = false, children, shot }) {
 
 export default function Landing() {
   useTitle('Huddle: a shared board for your team');
+  // /#features scrolls to the features from any page.
+  const { hash } = useLocation();
+  useEffect(() => {
+    if (hash) document.getElementById(hash.slice(1))?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [hash]);
   return (
     <>
       <a href="#main" className="skip-link">
@@ -58,7 +64,7 @@ export default function Landing() {
           />
         </section>
 
-        <div className="wrap features">
+        <div className="wrap features" id="features">
           <Feature
             id="f-columns"
             title="Columns that follow your process"

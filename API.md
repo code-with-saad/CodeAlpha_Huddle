@@ -230,3 +230,12 @@ Needs `SMTP_USER` and `SMTP_PASS` in `server/.env` (a Gmail address and a Google
 - The link is `/join/<token>`. Joining works once, for any signed in account; the invitation then becomes accepted. It can be withdrawn with `DELETE /api/projects/:id/invites/:inviteId` like the other kinds.
 
 `POST /api/projects/:id/invites` for an existing account (found by username or email) now also emails that person when email is set up; the answer includes `emailed: true` or `false`. The list of pending invitations includes email invitations as `{ kind: "email", email }` without their token. Inviting is limited to 30 requests an hour per IP.
+
+## Contact form
+
+| Method | Path | Auth | Body | Result |
+|---|---|---|---|---|
+| GET | `/api/contact` | none | none | `{ enabled }`, true when mail is set up |
+| POST | `/api/contact` | none | `name` (80), `email`, `message` (5 to 3000), `website` (must stay empty, it is a bot trap) | `{ ok: true }`. `400` with field `errors`, `503` when mail is not set up, `502` when sending failed, `429` after 5 messages an hour from one IP |
+
+The message is emailed to `CONTACT_TO` (default `xyroxx02@gmail.com`) with the sender as the reply address. It is not stored.

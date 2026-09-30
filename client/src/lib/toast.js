@@ -22,6 +22,7 @@ export function dismiss(id) {
 export const toast = {
   success: (m, o = {}) => push('success', m, 4000, o.action),
   info: (m, o = {}) => push('info', m, 4000, o.action),
+  warning: (m, o = {}) => push('warning', m, 6000, o.action),
   error: (m, o = {}) => push('error', m, 7000, o.action),
 };
 

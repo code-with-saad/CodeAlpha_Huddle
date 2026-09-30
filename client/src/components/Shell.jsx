@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { Bell, FolderKanban, Monitor, Moon, Sun, UserRound } from 'lucide-react';
 import Icon from './Icon.jsx';
 import CommandPalette from './CommandPalette.jsx';
+import { Wordmark } from './Logo.jsx';
 import NotificationBell from './NotificationBell.jsx';
 import ShortcutHelp from './ShortcutHelp.jsx';
 import { emit, on } from '../lib/bus.js';
@@ -75,7 +76,9 @@ export default function Shell() {
   return (
     <div className="shell">
       <header className="topbar">
-        <span className="wordmark">Huddle</span>
+        <Link to="/projects" className="wordmark" aria-label="Huddle projects">
+          <Wordmark />
+        </Link>
         <div className="topbar-actions">
           <NotificationBell />
         <button type="button" className="theme-btn" style={{ width: 'auto' }} onClick={cycle} aria-label={`Theme: ${theme}. Change theme`}>
@@ -86,10 +89,9 @@ export default function Shell() {
 
       <nav className="sidebar" aria-label="Main">
         <div className="sidebar-top">
-          <span className="wordmark" aria-label="Huddle">
-            <span aria-hidden="true">H</span>
-            <span className="label" aria-hidden="true">uddle</span>
-          </span>
+          <Link to="/projects" className="wordmark" aria-label="Huddle projects">
+            <Wordmark />
+          </Link>
           <NotificationBell />
         </div>
         <Links size={18} />

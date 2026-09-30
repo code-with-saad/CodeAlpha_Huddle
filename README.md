@@ -45,7 +45,7 @@ Try it locally with the demo accounts (after `npm run seed`, see below). Every d
 - Archive and restore for tasks, columns and projects (nothing is hard deleted), duplicate task, bulk select with Undo
 - Activity log filterable by kind, person and task
 - Project dashboard: open, completed and overdue counts, tasks per column and per person, and a chart of tasks created and completed per day
-- Landing page, Terms of Service and Privacy Policy
+- Public site with a header menu (Home, Features, About, Contact), a landing page, an About page, a contact form that emails the owner, Terms of Service and Privacy Policy
 - Light and dark themes designed separately, fully responsive (375, 768 and 1280 px and up), keyboard accessible
 
 ---
@@ -107,7 +107,7 @@ CodeAlpha_Huddle/
 │       ├── pages/           # One folder or file per screen
 │       │   ├── board/       # Board, List, Calendar, card panel, filters, bulk bar
 │       │   ├── dashboard/   # Dashboard and its charts
-│       │   └── landing/     # Landing page, Terms, Privacy
+│       │   └── landing/     # Landing page, About, Contact, Terms, Privacy
 │       └── styles/          # tokens.css, base.css, shell.css, ui.css
 ├── server/                  # Express API
 │   ├── api/                 # Vercel serverless entry
@@ -152,7 +152,7 @@ Inviting an email address that has no account sends that person an email with a 
 2. In `server/.env` set `SMTP_USER` (the Gmail address) and `SMTP_PASS` (the app password). `SMTP_FROM_NAME` and `APP_URL` are optional.
 3. Check it with `npm run mail:test -- you@example.com`.
 
-Without these settings the rest of the app works the same, and inviting an unknown address explains that email invitations are not set up.
+The same account also delivers messages from the public contact form to `CONTACT_TO` (default `xyroxx02@gmail.com`). Without these settings the rest of the app works the same, inviting an unknown address explains that email invitations are not set up, and the contact page shows the email address only.
 
 **Frontend**
 

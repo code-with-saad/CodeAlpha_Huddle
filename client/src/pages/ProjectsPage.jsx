@@ -25,6 +25,7 @@ function NewProjectDialog({ onClose }) {
       const { data } = await api.post('/projects', form);
       // Get a token that includes the new project's channel before its board opens.
       await Promise.race([refreshAccess(), new Promise((r) => setTimeout(r, 2500))]);
+      toast.success(`Created ${data.project.name}`);
       navigate(`/p/${data.project.id}`);
     } catch (err) {
       setFields(fieldErrors(err));

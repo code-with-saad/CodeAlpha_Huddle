@@ -130,8 +130,7 @@
     border-right: 1px solid var(--border);
   }
   .sidebar .wordmark {
-    padding: var(--space-2) 0 var(--space-4);
-    text-align: center;
+    padding: var(--space-2) 0 var(--space-3);
     font-size: var(--text-lg);
   }
   .sidebar .navlink,
@@ -170,7 +169,6 @@
     display: inline;
   }
   .sidebar .wordmark {
-    padding-left: var(--space-3);
-    text-align: left;
+    padding-left: var(--space-2);
   }
 }

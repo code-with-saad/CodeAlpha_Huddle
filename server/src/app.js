@@ -10,6 +10,7 @@ import projectRoutes from './routes/projects.js';
 import inviteRoutes from './routes/invites.js';
 import boardRoutes from './routes/board.js';
 import notificationRoutes from './routes/notifications.js';
+import contactRoutes from './routes/contact.js';
 import { withTab } from './services/context.js';
 
 // Refuse to run with a missing or weak signing secret: every token depends on it.
@@ -55,6 +56,7 @@ app.use('/api/projects', projectRoutes);
 app.use('/api/projects', boardRoutes);
 app.use('/api', inviteRoutes);
 app.use('/api', notificationRoutes);
+app.use('/api/contact', contactRoutes);
 
 app.use((_req, res) => res.status(404).json({ message: 'Not found' }));
 

@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { toast } from './toast.js';
 
 const TOKEN_KEY = 'huddle_token';
 
@@ -38,6 +39,19 @@ api.interceptors.request.use((config) => {
   config.headers['X-Tab-Id'] = TAB_ID;
   return config;
 });
+
+// Hitting a rate limit deserves a plain heads up, once in a while rather than for every blocked request.
+let lastLimitToast = 0;
+api.interceptors.response.use(
+  (res) => res,
+  (err) => {
+    if (err.response?.status === 429 && Date.now() - lastLimitToast > 8000) {
+      lastLimitToast = Date.now();
+      toast.warning(err.response.data?.message || 'Too many requests. Please slow down for a moment.');
+    }
+    return Promise.reject(err);
+  }
+);
 
 // Registered by the auth provider so the API layer does not import React state.
 export function onUnauthorized(handler) {

@@ -353,9 +353,55 @@
     scroll-snap-type: none;
     scroll-padding-inline: var(--space-6);
   }
-  .column,
-  .add-column,
+  /* Columns share the width of the screen, between a minimum and a maximum, so more of them fit without scrolling. */
+  .column {
+    flex: 1 0 224px;
+    width: auto;
+    max-width: 320px;
+  }
+  .add-column {
+    flex: 0 0 168px;
+    width: 168px;
+  }
   .add-column-form {
-    width: var(--column-w);
+    flex: 0 0 240px;
+    width: 240px;
+  }
+}
+
+/* Arrows that scroll a wide board. Touch screens swipe instead. */
+.board-wrap {
+  position: relative;
+}
+.board-nav {
+  display: none;
+}
+@media (min-width: 768px) {
+  .board-nav {
+    position: absolute;
+    top: 96px;
+    z-index: 5;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border: 1px solid var(--border-control);
+    border-radius: var(--radius-pill);
+    background: var(--raised);
+    color: var(--text);
+    box-shadow: var(--shadow-2);
+    cursor: pointer;
+  }
+  .board-nav:hover {
+    background: var(--accent-subtle);
+    color: var(--accent);
+  }
+  /* The arrows sit in the gutter beside the board, so they never cover a card. */
+  .board-nav-prev {
+    left: calc(-1 * var(--space-6) - 2px);
+  }
+  .board-nav-next {
+    right: calc(-1 * var(--space-6) - 2px);
   }
 }

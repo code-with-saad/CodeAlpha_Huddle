@@ -13,7 +13,7 @@ import {
   useSensors,
 } from '@dnd-kit/core';
 import { SortableContext, arrayMove, horizontalListSortingStrategy, sortableKeyboardCoordinates } from '@dnd-kit/sortable';
-import { Plus } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 import Dialog from '../../components/Dialog.jsx';
 import Icon from '../../components/Icon.jsx';
 import PromptDialog from '../../components/PromptDialog.jsx';
@@ -22,6 +22,7 @@ import { atLeast } from '../../lib/roles.js';
 import { toast } from '../../lib/toast.js';
 import { findColumnOf } from '../../lib/useBoard.js';
 import { useBoardCtx } from './BoardContext.jsx';
+import useBoardScroll from './useBoardScroll.js';
 import BoardColumn from './BoardColumn.jsx';
 import { CardView } from './BoardCard.jsx';
 import './board.css';
@@ -159,6 +160,7 @@ export default function BoardPage() {
   const [active, setActive] = useState(null); // { type, id }
   const [dialog, setDialog] = useState(null); // { kind, ... }
   const snapshot = useRef(null);
+  const scroll = useBoardScroll();
 
   const sensors = useSensors(
     useSensor(MouseSensor, { activationConstraint: { distance: 6 } }),
@@ -307,7 +309,18 @@ export default function BoardPage() {
     <>
       {api.activeFilters > 0 && canEdit && <p className="filter-note row-sub">Filters are on, so dragging and reordering are off. Clear them to rearrange.</p>}
       <DndContext sensors={sensors} collisionDetection={collision} onDragStart={onDragStart} onDragOver={onDragOver} onDragEnd={onDragEnd} onDragCancel={onDragCancel}>
-        <div className={`board${active ? ' board-dragging' : ''}`}>
+        <div className="board-wrap">
+        {scroll.prev && (
+          <button type="button" className="board-nav board-nav-prev" onClick={() => scroll.by(-1)} aria-label="Scroll the board left">
+            <Icon as={ChevronLeft} size={18} />
+          </button>
+        )}
+        {scroll.next && (
+          <button type="button" className="board-nav board-nav-next" onClick={() => scroll.by(1)} aria-label="Scroll the board right">
+            <Icon as={ChevronRight} size={18} />
+          </button>
+        )}
+        <div ref={scroll.ref} className={`board${active ? ' board-dragging' : ''}`}>
           <SortableContext items={columnIds} strategy={horizontalListSortingStrategy}>
             {board.columns.map((column, i) => (
               <BoardColumn
@@ -327,6 +340,7 @@ export default function BoardPage() {
             ))}
           </SortableContext>
           {canManage && <AddColumn onAdd={api.addColumn} />}
+        </div>
         </div>
         <DragOverlay>
           {activeCard && <CardView card={activeCard} overlay />}

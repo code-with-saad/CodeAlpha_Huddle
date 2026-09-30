@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Wordmark } from '../components/Logo.jsx';
 import RoleBadge from '../components/RoleBadge.jsx';
 import { api, errorMessage } from '../lib/api.js';
 import { toast } from '../lib/toast.js';
@@ -35,8 +36,8 @@ export default function JoinPage() {
   return (
     <main className="auth">
       <div className="auth-card">
-        <Link to="/" className="wordmark auth-wordmark">
-          Huddle
+        <Link to="/" className="wordmark auth-wordmark" aria-label="Huddle home">
+          <Wordmark />
         </Link>
         {error && (
           <>

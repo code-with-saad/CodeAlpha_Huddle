@@ -257,3 +257,58 @@ button {
 .title-row h1 {
   overflow-wrap: anywhere;
 }
+
+/* Logo and wordmark */
+.logo {
+  display: block;
+  flex: none;
+  border-radius: var(--radius-control);
+}
+.wordmark-row {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* Password field with a show and hide button */
+.password-field {
+  position: relative;
+  display: block;
+}
+.password-field .input {
+  padding-right: 40px;
+}
+.password-toggle {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 32px;
+  height: 32px;
+}
+
+/* Warning toasts and toast icons: colour plus an icon, never colour alone */
+.toast-warning {
+  border-left-color: var(--warning);
+}
+.toast-icon {
+  flex: none;
+  display: inline-flex;
+}
+.toast-success .toast-icon {
+  color: var(--success);
+}
+.toast-warning .toast-icon {
+  color: var(--warning);
+}
+.toast-error .toast-icon {
+  color: var(--danger);
+}
+.toast-info .toast-icon {
+  color: var(--accent);
+}
+.form-ok {
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-control);
+  background: var(--success-subtle);
+  color: var(--text);
+}

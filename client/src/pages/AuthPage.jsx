@@ -1,6 +1,9 @@
 import { useState } from 'react';
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
+import PasswordInput from '../components/PasswordInput.jsx';
+import { Wordmark } from '../components/Logo.jsx';
 import { useAuth } from '../lib/auth.jsx';
+import { toast } from '../lib/toast.js';
 import { errorMessage, fieldErrors } from '../lib/api.js';
 import './auth.css';
 
@@ -26,20 +29,23 @@ export default function AuthPage({ mode }) {
     setFormError('');
     setFields({});
     try {
-      if (isRegister) await register(form);
-      else await login({ email: form.email, password: form.password });
+      const who = isRegister ? await register(form) : await login({ email: form.email, password: form.password });
+      toast.success(isRegister ? `Account created. Welcome to Huddle, ${who.name}.` : `Welcome back, ${who.name}.`);
       navigate(location.state?.from || '/projects', { replace: true });
     } catch (err) {
       setFormError(errorMessage(err));
       setFields(fieldErrors(err));
+      if (!err.response || err.response.status >= 500) toast.error(errorMessage(err));
       setBusy(false);
     }
   }
 
-  const field = (key, label, props = {}) => (
+  const field = (key, label, props = {}) => {
+    const Input = props.type === 'password' ? PasswordInput : 'input';
+    return (
     <label className="field">
       <span className="field-label">{label}</span>
-      <input
+      <Input
         className="input"
         value={form[key]}
         onChange={set(key)}
@@ -53,13 +59,14 @@ export default function AuthPage({ mode }) {
         </span>
       )}
     </label>
-  );
+    );
+  };
 
   return (
     <main className="auth">
       <div className="auth-card">
-        <Link to="/" className="wordmark auth-wordmark">
-          Huddle
+        <Link to="/" className="wordmark auth-wordmark" aria-label="Huddle home">
+          <Wordmark />
         </Link>
         <h1>{isRegister ? 'Create your account' : 'Log in'}</h1>
 
