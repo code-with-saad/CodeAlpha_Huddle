@@ -87,7 +87,7 @@ A card on the board (its "face") is `{ id, column, title, position, createdAt, p
 
 ## Card detail
 
-Every card write below returns the whole card as `{ card, comments, people }`. `card` is the face plus `description`, `createdBy`, `checklistItems: [{ id, text, done }]` and `attachments: [{ id, url, name, size, mime, uploadedBy, createdAt }]`. `people` are public profiles of comment authors, uploaders and the creator, including people who have left. A comment is `{ id, card, author, body, mentions, createdAt, editedAt }`.
+Every card write below returns the whole card as `{ card, comments, people }`. `card` is the face plus `description`, `createdBy`, `checklistItems: [{ id, text, done }]` and `attachments: [{ id, url, name, size, mime, uploadedBy, createdAt }]`. `people` are public profiles of comment authors, uploaders and the creator, including people who have left. A comment is `{ id, card, author, parent, body, mentions, createdAt, editedAt }`; `parent` is the id of the top level comment it answers, or null.
 
 | Method | Path | Min role | Body | Notes |
 |---|---|---|---|---|
@@ -98,9 +98,9 @@ Every card write below returns the whole card as `{ card, comments, people }`. `
 | DELETE | `/api/projects/:id/cards/:cardId/checklist/:itemId` | member | none | |
 | POST | `/api/projects/:id/cards/:cardId/attachments` | member | `url`, `name`, `size`, `mime`, `publicId`, `resourceType` (`image` or `raw`) from a signed Cloudinary upload | `201`. The URL must be in our account under `huddle/attachments/`. Types: JPG, PNG, WebP, GIF, PDF, TXT, CSV, MD, DOCX, XLSX, PPTX. Up to 10 MB and 10 per card |
 | DELETE | `/api/projects/:id/cards/:cardId/attachments/:attachmentId` | member | none | The uploader or an admin. Also deletes the file from Cloudinary |
-| POST | `/api/projects/:id/cards/:cardId/comments` | member | `body` (2,000) | `201 { comment }`. `@username` of project members is stored in `mentions` |
+| POST | `/api/projects/:id/cards/:cardId/comments` | member | `body` (2,000), `parentId?` (a comment on the same card; replying to a reply attaches to its thread) | `201 { comment }`. `@username` of project members is stored in `mentions`. `404` if the parent does not exist on this card |
 | PATCH | `/api/projects/:id/cards/:cardId/comments/:commentId` | author | `body` | `{ comment }` |
-| DELETE | `/api/projects/:id/cards/:cardId/comments/:commentId` | author or admin | none | `{ ok }` |
+| DELETE | `/api/projects/:id/cards/:cardId/comments/:commentId` | author or admin | none | `{ ok }`. Deleting a top level comment deletes its replies; the `comment.deleted` event lists every removed id in `commentIds` |
 
 ## Labels
 
@@ -138,7 +138,7 @@ Presence on `project:<id>`: each open tab enters with `{ name, username, avatar 
 
 ## Notifications
 
-A notification is `{ id, type, actor, project: { id, name } | null, card: { id, title } | null, snippet, read, createdAt }`. Types: `assigned`, `mentioned`, `comment`, `due_soon`, `overdue`, `invited`.
+A notification is `{ id, type, actor, project: { id, name } | null, card: { id, title } | null, snippet, read, createdAt }`. Types: `assigned`, `mentioned`, `comment`, `reply`, `due_soon`, `overdue`, `invited`.
 
 | Method | Path | Auth | Body or query | Result |
 |---|---|---|---|---|
@@ -214,3 +214,19 @@ Every action answers `{ changed: [...], count }`, listing only the cards that ac
 ```
 
 Overdue and due soon count open tasks only. `series` includes tasks archived since, so history does not disappear; the totals cover active tasks.
+
+## Invitation emails
+
+Needs `SMTP_USER` and `SMTP_PASS` in `server/.env` (a Gmail address and a Google app password). Without them the endpoints below behave as before and `GET /api/config` reports `emailInvites: false`.
+
+| Method | Path | Auth | Result |
+|---|---|---|---|
+| GET | `/api/config` | yes | `{ emailInvites: boolean }` |
+
+`POST /api/projects/:id/invites` (admin) with an `email` that has no account:
+
+- With email set up: creates a single use email invitation valid for 7 days, sends the address an email with a join link, and answers `201 { invite: { kind: "email", email, role, expiresAt, ... }, emailed: true }`. The same address cannot have two pending invitations (`409`). If the email cannot be sent the invitation is removed and the answer is `502`.
+- Without email set up, or when the text is not a valid address: `404` with a message pointing to invite links.
+- The link is `/join/<token>`. Joining works once, for any signed in account; the invitation then becomes accepted. It can be withdrawn with `DELETE /api/projects/:id/invites/:inviteId` like the other kinds.
+
+`POST /api/projects/:id/invites` for an existing account (found by username or email) now also emails that person when email is set up; the answer includes `emailed: true` or `false`. The list of pending invitations includes email invitations as `{ kind: "email", email }` without their token. Inviting is limited to 30 requests an hour per IP.
