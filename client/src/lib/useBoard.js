@@ -8,7 +8,7 @@ import useChannel from './useChannel.js';
 function build(data) {
   const cards = Object.fromEntries(data.columns.map((c) => [c.id, []]));
   for (const card of data.cards) cards[card.column]?.push(card);
-  return { columns: data.columns.map(({ id, name }) => ({ id, name })), cards, labels: data.labels || [] };
+  return { columns: data.columns.map(({ id, name, isDone }) => ({ id, name, isDone: !!isDone })), cards, labels: data.labels || [] };
 }
 
 export const findColumnOf = (cards, cardId) => Object.keys(cards).find((k) => cards[k].some((c) => c.id === cardId));
@@ -200,7 +200,7 @@ export default function useBoard(projectId) {
       const { data } = await api.post(`${base}/columns`, { name });
       setBoard((b) => ({
         ...b,
-        columns: [...b.columns, { id: data.column.id, name: data.column.name }],
+        columns: [...b.columns, { id: data.column.id, name: data.column.name, isDone: !!data.column.isDone }],
         cards: { ...b.cards, [data.column.id]: [] },
       }));
     },
@@ -209,6 +209,15 @@ export default function useBoard(projectId) {
         (b) => ({ ...b, columns: b.columns.map((c) => (c.id === id ? { ...c, name } : c)) }),
         () => api.patch(`${base}/columns/${id}`, { name })
       );
+    },
+    // Marks a column as counting as done (or not). The tasks in it complete or reopen, so the board reloads.
+    async setColumnDone(id, isDone) {
+      const ok = await optimistic(
+        (b) => ({ ...b, columns: b.columns.map((c) => (c.id === id ? { ...c, isDone } : c)) }),
+        () => api.patch(`${base}/columns/${id}`, { isDone })
+      );
+      if (ok) await load();
+      return ok;
     },
     saveColumnOrder(id, index, snapshot) {
       return optimistic(null, () => api.patch(`${base}/columns/${id}`, { index }), snapshot);

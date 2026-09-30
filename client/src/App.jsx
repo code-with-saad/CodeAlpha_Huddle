@@ -13,6 +13,7 @@ import BoardViews from './pages/board/BoardViews.jsx';
 import CalendarView from './pages/board/CalendarView.jsx';
 import ListView from './pages/board/ListView.jsx';
 import ActivityPage from './pages/ActivityPage.jsx';
+import DashboardPage from './pages/dashboard/DashboardPage.jsx';
 import ArchivePage from './pages/ArchivePage.jsx';
 
 function Stub({ title, children }) {
@@ -53,6 +54,7 @@ export default function App() {
             <Route path="list" element={<ListView />} />
             <Route path="calendar" element={<CalendarView />} />
           </Route>
+          <Route path="dashboard" element={<DashboardPage />} />
           <Route path="activity" element={<ActivityPage />} />
           <Route path="archive" element={<ArchivePage />} />
           <Route path="members" element={<MembersPage />} />

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { GripVertical, MoreHorizontal, Plus } from 'lucide-react';
+import { CircleCheck, GripVertical, MoreHorizontal, Plus } from 'lucide-react';
 import Icon from '../../components/Icon.jsx';
 import Menu from '../../components/Menu.jsx';
 import BoardCard from './BoardCard.jsx';
@@ -79,6 +79,7 @@ export default function BoardColumn({ column, index, columns, cards, labels, peo
 
   const menuItems = [
     { label: 'Rename', onSelect: () => actions.renameColumn(column) },
+    { label: column.isDone ? 'Stop counting as done' : 'Count as done', onSelect: () => actions.setColumnDone(column, !column.isDone) },
     { label: 'Move left', disabled: index === 0, onSelect: () => actions.moveColumn(column, index - 1) },
     { label: 'Move right', disabled: index === columns.length - 1, onSelect: () => actions.moveColumn(column, index + 1) },
     { separator: true },
@@ -99,6 +100,12 @@ export default function BoardColumn({ column, index, columns, cards, labels, peo
           </button>
         )}
         <h2 className="column-name">{column.name}</h2>
+        {column.isDone && (
+          <span className="column-done" title="Tasks in this column count as done">
+            <Icon as={CircleCheck} size={14} />
+            <span className="visually-hidden">Counts as done</span>
+          </span>
+        )}
         <span className="column-count mono" aria-label={`${cards.length} tasks`}>
           {cards.length}
         </span>

@@ -44,7 +44,7 @@ export default function CalendarView() {
   const colName = (id) => board.columns.find((c) => c.id === id)?.name || '';
 
   const chip = (c) => (
-    <button key={c.id} type="button" className={`cal-chip${c.dueDate < today ? ' cal-chip-overdue' : ''}`} onClick={() => openCard(c.id)} title={`${c.title} (${colName(c.column)})`}>
+    <button key={c.id} type="button" className={`cal-chip${c.dueDate < today && !c.done ? ' cal-chip-overdue' : ''}`} onClick={() => openCard(c.id)} title={`${c.title} (${colName(c.column)})`}>
       {c.title}
     </button>
   );

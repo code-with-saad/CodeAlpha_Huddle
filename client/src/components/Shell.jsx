@@ -54,7 +54,7 @@ export default function Shell() {
       }
       if (e.ctrlKey || e.metaKey || e.altKey || typing(e.target) || document.querySelector('dialog[open]')) return;
       const inProject = location.pathname.match(/^\/p\/([^/]+)/);
-      const onBoardViews = inProject && !/\/(members|activity|archive)$/.test(location.pathname);
+      const onBoardViews = inProject && !/\/(members|activity|archive|dashboard)$/.test(location.pathname);
       if (e.key === '?') {
         e.preventDefault();
         setHelp(true);

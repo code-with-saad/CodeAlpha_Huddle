@@ -1,6 +1,6 @@
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { CheckSquare, Flag, MessageSquare, MoreHorizontal, Paperclip } from 'lucide-react';
+import { CheckSquare, CircleCheck, Flag, MessageSquare, MoreHorizontal, Paperclip } from 'lucide-react';
 import Avatar from '../../components/Avatar.jsx';
 import Icon from '../../components/Icon.jsx';
 import Menu from '../../components/Menu.jsx';
@@ -30,11 +30,13 @@ export function PriorityMark({ priority, withText = false }) {
 
 // Visual card. Also used inside the drag overlay, so it takes no drag hooks itself.
 export function CardView({ card, menu, labels = [], people = [], overlay = false, selectable = false, checked = false }) {
+  // A finished task is never overdue, so the date stays plain.
   const due = dueInfo(card.dueDate);
+  const dueState = card.done ? 'later' : due?.state;
   const cardLabels = (card.labels || []).map((id) => labels.find((l) => l.id === id)).filter(Boolean);
   const assignees = (card.assignees || []).map((id) => people.find((p) => p.id === id)).filter(Boolean);
   const { done = 0, total = 0 } = card.checklist || {};
-  const hasMeta = due || total || card.commentCount || card.attachmentCount;
+  const hasMeta = due || card.done || total || card.commentCount || card.attachmentCount;
 
   return (
     <div className={`card${overlay ? ' card-overlay' : ''}${checked ? ' card-selected' : ''}`}>
@@ -55,9 +57,15 @@ export function CardView({ card, menu, labels = [], people = [], overlay = false
         <div className="card-foot">
           <div className="card-meta mono">
             {due && (
-              <span className={`meta meta-${due.state}`} title={due.text}>
+              <span className={`meta meta-${dueState}`} title={due.text}>
                 {due.label}
                 <span className="visually-hidden">. {due.text}</span>
+              </span>
+            )}
+            {card.done && (
+              <span className="meta meta-done" title="Completed">
+                <Icon as={CircleCheck} size={13} />
+                Done
               </span>
             )}
             {total > 0 && (

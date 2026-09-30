@@ -295,6 +295,7 @@ export default function BoardPage() {
     },
     archiveCard: api.archiveWithUndo,
     renameColumn: (column) => setDialog({ kind: 'rename', column }),
+    setColumnDone: (column, isDone) => api.setColumnDone(column.id, isDone),
     moveColumn: (column, index) => api.moveColumn(column.id, index),
     deleteColumn: (column) => setDialog({ kind: 'delete', column }),
   };

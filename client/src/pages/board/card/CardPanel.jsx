@@ -111,7 +111,7 @@ export default function CardPanel({ cardId, board, onClose, onCardChange, onArch
   }, []);
 
   const d = card.data;
-  const due = d ? dueInfo(d.card.dueDate) : null;
+  const due = d && !d.card.done ? dueInfo(d.card.dueDate) : null;
   const labels = board.labels;
 
   return (
@@ -237,7 +237,13 @@ export default function CardPanel({ cardId, board, onClose, onCardChange, onArch
                     )}
                   </>
                 ) : (
-                  <span>{due ? due.text : <span className="row-sub">None</span>}</span>
+                  <span>{due ? due.text : d.card.dueDate ? dueInfo(d.card.dueDate).label : <span className="row-sub">None</span>}</span>
+                )}
+                {d.card.done && (
+                  <span className="meta meta-done">
+                    <Icon as={CalendarDays} size={13} />
+                    Completed {new Date(d.card.completedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                  </span>
                 )}
                 {due && (due.state === 'overdue' || due.state === 'soon') && (
                   <span className={`meta meta-${due.state}`}>

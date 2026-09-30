@@ -99,7 +99,10 @@ export default function ProjectLayout() {
         <NavLink to={{ pathname: `/p/${id}/calendar`, search: keep }} className="tab">
           Calendar
         </NavLink>
-        <NavLink to={`/p/${id}/activity`} className="tab tab-sep">
+        <NavLink to={`/p/${id}/dashboard`} className="tab tab-sep">
+          Dashboard
+        </NavLink>
+        <NavLink to={`/p/${id}/activity`} className="tab">
           Activity
         </NavLink>
         <NavLink to={`/p/${id}/archive`} className="tab">

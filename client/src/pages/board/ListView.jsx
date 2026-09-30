@@ -92,7 +92,7 @@ export default function ListView() {
                   {c.assignees.length === 0 && <span className="row-sub">Nobody</span>}
                 </td>
                 <td data-label="Priority">{c.priority === 'none' ? <span className="row-sub">None</span> : <PriorityMark priority={c.priority} withText />}<span className="visually-hidden">{PRIORITY_LABEL[c.priority]}</span></td>
-                <td data-label="Due">{due ? <span className={`meta mono meta-${due.state}`}>{due.label}</span> : <span className="row-sub">None</span>}</td>
+                <td data-label="Due">{c.done ? <span className="meta meta-done">Done</span> : due ? <span className={`meta mono meta-${due.state}`}>{due.label}</span> : <span className="row-sub">None</span>}</td>
                 <td data-label="Labels">
                   <div className="cell-labels">{labels.map((l) => <LabelChip key={l.id} label={l} />)}</div>
                 </td>
