@@ -1,6 +1,7 @@
 import Card from '../models/Card.js';
 import Comment from '../models/Comment.js';
 import { OBJECT_ID } from '../middleware/project.js';
+import { logActivity } from '../services/activity.js';
 import { notify } from '../services/notify.js';
 import { emitProject } from '../services/realtime.js';
 import { atLeast } from '../utils/roles.js';
@@ -29,6 +30,7 @@ export async function addComment(req, res) {
   card.watchers.addToSet(req.user._id, ...mentions);
   await card.save();
   await announce(req, 'comment.created', card, { comment: serializeComment(comment) });
+  await logActivity({ project: req.project, actor: req.user, type: 'card.commented', card, data: { snippet: body.slice(0, 120) } });
 
   // Mentioned people hear about it once, as a mention; other followers get a comment notification.
   const mentioned = new Set(mentions.map(String));

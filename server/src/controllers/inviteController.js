@@ -3,6 +3,7 @@ import Invite from '../models/Invite.js';
 import Project from '../models/Project.js';
 import User from '../models/User.js';
 import { OBJECT_ID } from '../middleware/project.js';
+import { logActivity } from '../services/activity.js';
 import { notify } from '../services/notify.js';
 import { emitProject, emitUser } from '../services/realtime.js';
 import { assignableBy } from '../utils/roles.js';
@@ -23,6 +24,7 @@ async function addMember(projectId, userId, role) {
 
 // Someone joined: open boards show the new member, and their own tab gets access to the project channel.
 async function joined(projectId, userId) {
+  await logActivity({ project: projectId, actor: userId, type: 'member.joined' });
   await emitProject(projectId, 'project.changed', {}, userId);
   await emitUser(userId, 'access.changed', { projectId: String(projectId) });
 }

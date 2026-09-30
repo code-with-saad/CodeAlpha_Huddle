@@ -20,6 +20,8 @@ import {
   updateChecklistItem,
 } from '../controllers/cardController.js';
 import { addComment, deleteComment, editComment } from '../controllers/commentController.js';
+import { listActivity } from '../controllers/activityController.js';
+import { bulkCards, duplicateCard, listArchive, restoreCard, restoreColumn } from '../controllers/cardOpsController.js';
 import { createLabel, deleteLabel, updateLabel } from '../controllers/labelController.js';
 import { requireAuth } from '../middleware/auth.js';
 import { loadProject, requireRole } from '../middleware/project.js';
@@ -35,14 +37,21 @@ router.get('/:id/board', read, getBoard);
 router.post('/:id/columns', admin, createColumn);
 router.patch('/:id/columns/:columnId', admin, updateColumn);
 router.delete('/:id/columns/:columnId', admin, deleteColumn);
+router.post('/:id/columns/:columnId/restore', admin, restoreColumn);
+
+router.get('/:id/archive', read, listArchive);
+router.get('/:id/activity', read, listActivity);
 
 router.post('/:id/cards', member, createCard);
+router.post('/:id/cards/bulk', member, bulkCards);
 router.get('/:id/cards/:cardId', read, getCard);
 // Following a card is not an edit, so viewers can do it too.
 router.post('/:id/cards/:cardId/watch', [requireAuth, writeLimiter, loadProject()], setWatching(true));
 router.delete('/:id/cards/:cardId/watch', [requireAuth, writeLimiter, loadProject()], setWatching(false));
 router.patch('/:id/cards/:cardId', member, updateCard);
 router.post('/:id/cards/:cardId/move', member, moveCard);
+router.post('/:id/cards/:cardId/duplicate', member, duplicateCard);
+router.post('/:id/cards/:cardId/restore', member, restoreCard);
 router.delete('/:id/cards/:cardId', member, archiveCard);
 
 router.post('/:id/cards/:cardId/checklist', member, addChecklistItem);

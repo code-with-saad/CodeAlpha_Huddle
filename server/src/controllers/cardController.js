@@ -4,6 +4,7 @@ import Comment from '../models/Comment.js';
 import Label from '../models/Label.js';
 import User from '../models/User.js';
 import { OBJECT_ID } from '../middleware/project.js';
+import { logActivity } from '../services/activity.js';
 import { notify } from '../services/notify.js';
 import { emitProject } from '../services/realtime.js';
 import { mentionedMemberIds } from '../utils/mentions.js';
@@ -69,6 +70,7 @@ export async function updateCard(req, res) {
   const errors = {};
   const oldAssignees = card.assignees.map(String);
   const oldDescription = card.description;
+  const before = { title: card.title, priority: card.priority, due: card.dueDate ? card.dueDate.toISOString().slice(0, 10) : null };
 
   if (b.title !== undefined) {
     const title = str(b.title);
@@ -117,8 +119,22 @@ export async function updateCard(req, res) {
   card.watchers.addToSet(...newlyAssigned, ...newlyMentioned);
 
   const ctx = { actor: req.user, project: req.project, card };
+  const removed = oldAssignees.filter((id) => !card.assignees.map(String).includes(id));
+  const history = async () => {
+    const log = (type, data = {}) => logActivity({ project: req.project, actor: req.user, type, card, data });
+    const names = async (ids) => (ids.length ? (await User.find({ _id: { $in: ids } }).select('name username')).map((u) => u.name || u.username) : []);
+    const jobs = [];
+    if (card.title !== before.title) jobs.push(log('card.renamed', { from: before.title }));
+    if (card.priority !== before.priority) jobs.push(log('card.priority', { to: card.priority, from: before.priority }));
+    const due = card.dueDate ? card.dueDate.toISOString().slice(0, 10) : null;
+    if (due !== before.due) jobs.push(log('card.due', { to: due }));
+    if (newlyAssigned.length) jobs.push(names(newlyAssigned).then((users) => log('card.assigned', { users })));
+    if (removed.length) jobs.push(names(removed).then((users) => log('card.unassigned', { users })));
+    await Promise.all(jobs);
+  };
   await finish(req, res, card, 200, () =>
     Promise.all([
+      history(),
       notify(newlyAssigned, { ...ctx, type: 'assigned', snippet: 'Assigned you to this card' }),
       notify(newlyMentioned, { ...ctx, type: 'mentioned', snippet: 'Mentioned you in the description' }),
     ])
@@ -194,7 +210,7 @@ export async function addAttachment(req, res) {
   if (card.attachments.length >= MAX_ATTACHMENTS) return res.status(409).json({ message: `A card can hold ${MAX_ATTACHMENTS} attachments` });
 
   card.attachments.push({ url, name: str(name), size, mime, publicId, resourceType, uploadedBy: req.user._id });
-  await finish(req, res, card, 201);
+  await finish(req, res, card, 201, () => logActivity({ project: req.project, actor: req.user, type: 'card.attached', card, data: { name: str(name) } }));
 }
 
 // Best effort: a failure here leaves an orphan file in Cloudinary but never blocks the user.

@@ -1,6 +1,8 @@
 import Project from '../models/Project.js';
 import { OBJECT_ID } from '../middleware/project.js';
 import Card from '../models/Card.js';
+import User from '../models/User.js';
+import { logActivity } from '../services/activity.js';
 import { emitProject, emitUser } from '../services/realtime.js';
 import { createDefaultColumns } from './boardController.js';
 
@@ -76,6 +78,7 @@ export async function updateProject(req, res) {
   if (Object.keys(errors).length) return res.status(400).json({ message: 'Check the highlighted fields', errors });
   Object.assign(req.project, out);
   await req.project.save();
+  await logActivity({ project: req.project, actor: req.user, type: 'project.updated', data: { name: req.project.name } });
   await changed(req);
   const full = await populated(Project.findById(req.project._id));
   res.json({ project: serialize(full, req.role) });
@@ -84,6 +87,7 @@ export async function updateProject(req, res) {
 export const setArchived = (archive) => async (req, res) => {
   req.project.archivedAt = archive ? new Date() : null;
   await req.project.save();
+  await logActivity({ project: req.project, actor: req.user, type: archive ? 'project.archived' : 'project.restored' });
   await changed(req);
   res.json({ ok: true, archived: archive });
 };
@@ -111,6 +115,7 @@ export async function changeRole(req, res) {
   }
   target.role = role;
   await req.project.save();
+  await logActivity({ project: req.project, actor: req.user, type: 'member.role', data: { user: (await User.findById(target.user).select('name username'))?.name, to: role } });
   await changed(req);
   await emitUser(target.user, 'access.changed', { projectId: String(req.project._id) });
   res.json({ ok: true });
@@ -131,6 +136,7 @@ export async function removeMember(req, res) {
   await req.project.save();
   // Someone who left can no longer be assigned to anything here.
   await Card.updateMany({ project: req.project._id, assignees: target.user }, { $pull: { assignees: target.user } });
+  await logActivity({ project: req.project, actor: req.user, type: 'member.removed', data: { user: (await User.findById(target.user).select('name username'))?.name, left: self } });
   await changed(req);
   // The person removed (or leaving) must drop the project channel, so their token is re-issued without it.
   await emitUser(target.user, 'access.changed', { removedFrom: String(req.project._id) });
@@ -145,6 +151,7 @@ export async function transferOwnership(req, res) {
   target.role = 'owner';
   current.role = 'admin';
   await req.project.save();
+  await logActivity({ project: req.project, actor: req.user, type: 'member.role', data: { user: (await User.findById(target.user).select('name username'))?.name, to: 'owner' } });
   await changed(req);
   await emitUser(target.user, 'access.changed', { projectId: String(req.project._id) });
   res.json({ ok: true });

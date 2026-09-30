@@ -3,6 +3,7 @@ import Column from '../models/Column.js';
 import Label from '../models/Label.js';
 import { OBJECT_ID } from '../middleware/project.js';
 import { STEP, endPosition, placeAt } from '../utils/order.js';
+import { logActivity } from '../services/activity.js';
 import { emitProject } from '../services/realtime.js';
 import { serializeCard, serializeLabel } from '../utils/serialize.js';
 
@@ -68,6 +69,7 @@ export async function createColumn(req, res) {
   const filter = { project: req.project._id, archivedAt: null };
   if ((await Column.countDocuments(filter)) >= MAX_COLUMNS) return res.status(409).json({ message: `A project can have up to ${MAX_COLUMNS} columns` });
   const column = await Column.create({ project: req.project._id, name, position: await endPosition(Column, filter) });
+  await logActivity({ project: req.project, actor: req.user, type: 'column.created', data: { name } });
   await reload(req);
   res.status(201).json({ column: serializeColumn(column) });
 }
@@ -75,9 +77,11 @@ export async function createColumn(req, res) {
 export async function updateColumn(req, res) {
   const column = await findColumn(req, res, req.params.columnId);
   if (!column) return;
+  let renamedFrom = null;
   if (req.body.name !== undefined) {
     const name = str(req.body.name);
     if (!validName(res, name)) return;
+    if (name !== column.name) renamedFrom = column.name;
     column.name = name;
   }
   if (req.body.index !== undefined) {
@@ -86,6 +90,7 @@ export async function updateColumn(req, res) {
     column.position = await placeAt(Column, { project: req.project._id, archivedAt: null }, column._id, index);
   }
   await column.save();
+  if (renamedFrom) await logActivity({ project: req.project, actor: req.user, type: 'column.renamed', data: { from: renamedFrom, to: column.name } });
   await reload(req);
   res.json({ column: serializeColumn(column) });
 }
@@ -116,6 +121,7 @@ export async function deleteColumn(req, res) {
   }
   column.archivedAt = new Date();
   await column.save();
+  await logActivity({ project: req.project, actor: req.user, type: 'column.deleted', data: { name: column.name, cards: count } });
   await reload(req);
   res.json({ ok: true });
 }
@@ -135,6 +141,7 @@ export async function createCard(req, res) {
   const state = {};
   const position = index === null ? await endPosition(Card, filter) : await placeAt(Card, filter, null, index, state);
   const card = await Card.create({ project: req.project._id, column: column._id, title, position, createdBy: req.user._id, watchers: [req.user._id] });
+  await logActivity({ project: req.project, actor: req.user, type: 'card.created', card, data: { column: column.name } });
   if (state.renumbered) await reload(req);
   else await emitProject(req.project._id, 'card.upsert', { card: serializeCard(card) }, req.user._id);
   res.status(201).json({ card: serializeCard(card) });
@@ -148,11 +155,13 @@ export async function moveCard(req, res) {
   const index = int(req.body.index);
   if (index === null || index < 0) return res.status(400).json({ message: 'Invalid position' });
   const state = {};
+  const fromColumn = String(card.column) !== String(column._id) ? await Column.findById(card.column).select('name') : null;
   card.column = column._id;
   card.position = await placeAt(Card, { column: column._id, archivedAt: null }, card._id, index, state);
   await card.save();
   // Final index in the column, so other browsers can place the card without knowing our positions.
   const at = await Card.countDocuments({ column: column._id, archivedAt: null, _id: { $ne: card._id }, position: { $lt: card.position } });
+  if (fromColumn) await logActivity({ project: req.project, actor: req.user, type: 'card.moved', card, data: { from: fromColumn.name, to: column.name } });
   if (state.renumbered) await reload(req);
   else await emitProject(req.project._id, 'card.moved', { card: serializeCard(card), index: at }, req.user._id);
   res.json({ card: serializeCard(card), index: at });
@@ -163,6 +172,7 @@ export async function archiveCard(req, res) {
   if (!card) return;
   card.archivedAt = new Date();
   await card.save();
+  await logActivity({ project: req.project, actor: req.user, type: 'card.archived', card });
   await emitProject(req.project._id, 'card.removed', { cardId: String(card._id) }, req.user._id);
   res.json({ ok: true });
 }
