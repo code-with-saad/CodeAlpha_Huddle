@@ -92,7 +92,7 @@ export default function MembersPage() {
     if (kind === 'remove') return run(() => api.delete(`/projects/${project.id}/members/${member.user.id}`), `${member.user.name} removed`);
     if (kind === 'owner') return run(() => api.post(`/projects/${project.id}/members/${member.user.id}/make-owner`), `${member.user.name} is now the owner`);
     if (kind === 'leave') {
-      if (await run(() => api.delete(`/projects/${project.id}/members/${user.id}`), 'You left the project')) navigate('/');
+      if (await run(() => api.delete(`/projects/${project.id}/members/${user.id}`), 'You left the project')) navigate('/projects');
       return;
     }
     if (kind === 'archive') return run(() => api.post(`/projects/${project.id}/archive`), 'Project archived');

@@ -10,7 +10,7 @@ import { useNotifications } from '../lib/notifications.jsx';
 import { applyTheme, getTheme, nextTheme } from '../lib/theme.js';
 
 const NAV = [
-  { to: '/', label: 'Projects', glyph: FolderKanban, end: true },
+  { to: '/projects', label: 'Projects', glyph: FolderKanban, end: true },
   { to: '/notifications', label: 'Notifications', glyph: Bell },
   { to: '/profile', label: 'Profile', glyph: UserRound },
 ];

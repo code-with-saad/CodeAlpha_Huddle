@@ -424,3 +424,32 @@
 .toast-action:hover {
   background: var(--accent-subtle);
 }
+
+/* Filter selects: always visible from tablet width, behind a button on phones */
+.filter-group {
+  display: contents;
+}
+.filter-toggle {
+  display: none;
+}
+@media (max-width: 767px) {
+  .filter-toggle {
+    display: inline-flex;
+  }
+  .filter-group {
+    display: none;
+    flex: 1 0 100%;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+  }
+  .filter-group.open {
+    display: flex;
+  }
+  .filter-group .input-sm {
+    flex: 1 1 140px;
+  }
+  .filter-search {
+    flex: 1 1 140px;
+    max-width: none;
+  }
+}

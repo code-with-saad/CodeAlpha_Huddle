@@ -51,7 +51,7 @@ export default function ProjectLayout() {
     return (
       <div className="empty">
         {error.status === 404 ? 'This project does not exist, or you are not a member of it.' : error.message}{' '}
-        <Link to="/" className="inline-link">
+        <Link to="/projects" className="inline-link">
           Back to projects
         </Link>
       </div>

@@ -15,7 +15,7 @@ export default function AuthPage({ mode }) {
   const [formError, setFormError] = useState('');
   const [fields, setFields] = useState({});
 
-  if (status === 'in' && user) return <Navigate to={location.state?.from || '/'} replace />;
+  if (status === 'in' && user) return <Navigate to={location.state?.from || '/projects'} replace />;
 
   const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
 
@@ -28,7 +28,7 @@ export default function AuthPage({ mode }) {
     try {
       if (isRegister) await register(form);
       else await login({ email: form.email, password: form.password });
-      navigate(location.state?.from || '/', { replace: true });
+      navigate(location.state?.from || '/projects', { replace: true });
     } catch (err) {
       setFormError(errorMessage(err));
       setFields(fieldErrors(err));

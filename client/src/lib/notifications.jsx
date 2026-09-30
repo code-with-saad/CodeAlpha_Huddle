@@ -34,7 +34,7 @@ export function describe(n) {
 }
 
 // Where a notification leads: the card on its board, or the projects page for invitations.
-export const targetOf = (n) => (n.card && n.project ? `/p/${n.project.id}?card=${n.card.id}` : '/');
+export const targetOf = (n) => (n.card && n.project ? `/p/${n.project.id}?card=${n.card.id}` : '/projects');
 
 // Owns the realtime connection for the signed-in person and everything that arrives on their personal
 // channel: notifications, invitations and access changes. Time-based notifications (due soon, overdue)

@@ -43,8 +43,9 @@ const tab = async (page, name) => {
 };
 
 // Both formats from the same frame: PNG for the README, WebP (smaller) for the landing page.
-async function snap(page, name, theme) {
-  await page.evaluate(() => document.querySelectorAll('.toast-close').forEach((b) => b.click()));
+async function snap(page, name, theme, keepPopovers = false) {
+  // Closing toasts by clicking would also close an open popover, so skip it when one is the subject.
+  if (!keepPopovers) await page.evaluate(() => document.querySelectorAll('.toast-close').forEach((b) => b.click()));
   await sleep(250);
   await page.screenshot({ path: path.join(PNG, `${name}-${theme}.png`), type: 'png' });
   await page.screenshot({ path: path.join(WEBP, `${name}-${theme}.webp`), type: 'webp', quality: 86 });
@@ -106,7 +107,7 @@ async function snap(page, name, theme) {
     await sam.page.evaluate(() => [...document.querySelectorAll('.bell-btn')].find((x) => x.offsetParent).click());
     await sam.page.waitForSelector('.bell-panel .note-row');
     await sleep(700);
-    await snap(sam.page, 'notifications', theme);
+    await snap(sam.page, 'notifications', theme, true);
     await sam.ctx.close();
 
     // A phone

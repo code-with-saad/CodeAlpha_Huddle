@@ -59,7 +59,7 @@ export default function CommandPalette({ onClose, onHelp }) {
     if (current && editable(current)) commands.push({ id: 'new', icon: Plus, label: `Create task in ${current.name}`, hint: 'C', run: go(`/p/${current.id}`, { quickAdd: true }) });
     else projects.filter(editable).slice(0, 4).forEach((p) => commands.push({ id: `new-${p.id}`, icon: Plus, label: `Create task in ${p.name}`, run: go(`/p/${p.id}`, { quickAdd: true }) }));
     commands.push(
-      { id: 'projects', icon: FolderKanban, label: 'Go to projects', run: go('/') },
+      { id: 'projects', icon: FolderKanban, label: 'Go to projects', run: go('/projects') },
       { id: 'notes', icon: Bell, label: 'Go to notifications', run: go('/notifications') },
       { id: 'profile', icon: UserRound, label: 'Go to profile', run: go('/profile') },
       { id: 'theme', icon: Moon, label: 'Change theme', run: () => { onClose(); emit('toggle-theme'); } },

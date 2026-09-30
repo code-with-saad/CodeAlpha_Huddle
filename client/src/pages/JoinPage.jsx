@@ -42,7 +42,7 @@ export default function JoinPage() {
           <>
             <h1>Cannot open this invite</h1>
             <p role="alert">{error}</p>
-            <Link to="/" className="btn">
+            <Link to="/projects" className="btn">
               Go to your projects
             </Link>
           </>

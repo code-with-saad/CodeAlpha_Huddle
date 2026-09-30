@@ -1,4 +1,4 @@
-import { CheckSquare, Plus, Search, X } from 'lucide-react';
+import { CheckSquare, ListFilter, Plus, Search, X } from 'lucide-react';
 import Icon from '../../components/Icon.jsx';
 import { on, emit } from '../../lib/bus.js';
 import { PRIORITY_LABEL } from './BoardCard.jsx';
@@ -12,6 +12,8 @@ export default function FilterBar() {
   const { project, filters, setFilter, clearFilters, activeFilters, board, visibleCards, allCards, selecting, setSelecting, clearSelection } = ctx;
   const canEdit = atLeast(project.myRole, 'member') && !project.archived;
   const input = useRef(null);
+  // On a phone the four selects sit behind a Filters button so the board is not pushed off the screen.
+  const [open, setOpen] = useState(false);
 
   // The box keeps its own text and pushes it to the URL after a pause. Binding it straight to the
   // router made fast typing drop characters, because route updates are applied asynchronously.
@@ -41,6 +43,11 @@ export default function FilterBar() {
           onKeyDown={(e) => e.key === 'Escape' && (setText(''), setFilter('q', ''), e.currentTarget.blur())}
         />
       </div>
+      <button type="button" className="btn btn-sm filter-toggle" aria-expanded={open} aria-controls="filter-group" onClick={() => setOpen((o) => !o)}>
+        <Icon as={ListFilter} size={14} />
+        Filters{activeFilters > 0 ? ` (${activeFilters})` : ''}
+      </button>
+      <div id="filter-group" className={`filter-group${open ? ' open' : ''}`}>
       <select className="input input-sm" aria-label="Assignee" value={filters.assignee} onChange={(e) => setFilter('assignee', e.target.value)}>
         <option value="">Anyone</option>
         <option value="me">Assigned to me</option>
@@ -74,6 +81,7 @@ export default function FilterBar() {
         <option value="week">Next 7 days</option>
         <option value="none">No due date</option>
       </select>
+      </div>
       {activeFilters > 0 && (
         <button type="button" className="btn btn-sm btn-ghost" onClick={clearFilters}>
           <Icon as={X} size={14} />
