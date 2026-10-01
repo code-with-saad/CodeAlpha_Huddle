@@ -180,3 +180,5 @@ Do not run the seed against a database with real data you care about. It only to
 npm i --no-save puppeteer-core
 node tools/capture-screenshots.cjs     # needs the app and the seed running
 ```
+
+Part of a 3-project internship submission for CodeAlpha. See also [Nexoria](https://github.com/code-with-saad/CodeAlpha_Nexoria) · [Circl](https://github.com/code-with-saad/CodeAlpha_Circl) · [Huddle](https://github.com/code-with-saad/CodeAlpha_Huddle)
