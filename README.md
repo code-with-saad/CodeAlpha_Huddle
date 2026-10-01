@@ -17,7 +17,7 @@ Huddle is a shared board for small teams: custom columns, task cards with assign
 
 ## Live Demo
 
-> [Huddle Project Management Tool](https://codealpha-huddle.vercel.app/).
+> [Huddle Project Management Tool](https://huddle-xyz.vercel.app/).
 
 Try it locally with the demo accounts (after `npm run seed`, see below). Every demo account uses the password `huddle-demo-1234`.
 
