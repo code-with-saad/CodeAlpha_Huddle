@@ -180,5 +180,3 @@ Do not run the seed against a database with real data you care about. It only to
 npm i --no-save puppeteer-core
 node tools/capture-screenshots.cjs     # needs the app and the seed running
 ```
-
-API reference: [API.md](API.md).
