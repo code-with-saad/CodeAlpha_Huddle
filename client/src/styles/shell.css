@@ -66,6 +66,8 @@
 .main {
   padding: var(--space-4);
   max-width: 100%;
+  min-width: 0;
+  overflow-x: clip;
 }
 
 .page-head {
@@ -86,6 +88,51 @@
 
 .sidebar-foot {
   margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--border);
+}
+a.theme-btn {
+  text-decoration: none;
+}
+.theme-btn .kbd {
+  margin-left: auto;
+}
+.user-chip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-width: 0;
+  padding: var(--space-2) var(--space-1);
+  border-radius: var(--radius-control);
+  color: var(--text);
+  text-decoration: none;
+}
+.user-chip:hover {
+  background: var(--canvas);
+}
+.user-chip-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.25;
+}
+.user-chip-name,
+.user-chip-sub {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.user-chip-name {
+  font-size: var(--text-sm);
+  font-weight: 500;
+}
+.user-chip-sub {
+  color: var(--text-muted);
+  font-size: var(--text-xs);
 }
 
 .theme-btn {
@@ -159,6 +206,13 @@
   }
   .sidebar {
     padding: var(--space-4) var(--space-3);
+  }
+  .sidebar .kbd.label {
+    display: inline;
+  }
+  .sidebar .user-chip {
+    justify-content: flex-start;
+    padding: var(--space-2) var(--space-3);
   }
   .sidebar .navlink,
   .sidebar .theme-btn {

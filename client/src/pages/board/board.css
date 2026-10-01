@@ -10,6 +10,11 @@
   scroll-snap-type: x mandatory;
   scroll-padding-inline: var(--space-4);
   -webkit-overflow-scrolling: touch;
+  /* Arrows, the wheel and swiping scroll the board, so the native bar is hidden. */
+  scrollbar-width: none;
+}
+.board::-webkit-scrollbar {
+  display: none;
 }
 /* Snapping fights auto-scroll while dragging, so it is off during a drag. */
 .board-dragging {
@@ -75,6 +80,8 @@
   min-height: 48px;
   max-height: calc(100dvh - 300px);
   overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
 }
 .column-empty {
   padding: var(--space-3);
@@ -384,8 +391,8 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 28px;
-    height: 28px;
+    width: 24px;
+    height: 24px;
     border: 1px solid var(--border-control);
     border-radius: var(--radius-pill);
     background: var(--raised);
@@ -399,9 +406,9 @@
   }
   /* The arrows sit in the gutter beside the board, so they never cover a card. */
   .board-nav-prev {
-    left: calc(-1 * var(--space-6) - 2px);
+    left: calc(-1 * var(--space-6));
   }
   .board-nav-next {
-    right: calc(-1 * var(--space-6) - 2px);
+    right: calc(-1 * var(--space-6));
   }
 }

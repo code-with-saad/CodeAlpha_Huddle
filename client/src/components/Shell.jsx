@@ -1,12 +1,15 @@
 import { useEffect, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { Bell, FolderKanban, Monitor, Moon, Sun, UserRound } from 'lucide-react';
+import { Bell, CircleHelp, FolderKanban, Info, LogOut, Mail, Monitor, Moon, Search, Sun, UserRound } from 'lucide-react';
+import Avatar from './Avatar.jsx';
 import Icon from './Icon.jsx';
 import CommandPalette from './CommandPalette.jsx';
 import { Wordmark } from './Logo.jsx';
 import NotificationBell from './NotificationBell.jsx';
 import ShortcutHelp from './ShortcutHelp.jsx';
 import { emit, on } from '../lib/bus.js';
+import { useAuth } from '../lib/auth.jsx';
+import { toast } from '../lib/toast.js';
 import { useNotifications } from '../lib/notifications.jsx';
 import { applyTheme, getTheme, nextTheme } from '../lib/theme.js';
 
@@ -31,6 +34,11 @@ function Links({ size }) {
 }
 
 export default function Shell() {
+  const { user, logout } = useAuth();
+  const signOut = () => {
+    logout();
+    toast.info('You have been logged out.');
+  };
   const [theme, setTheme] = useState(getTheme);
   const cycle = () => {
     const next = nextTheme(theme);
@@ -81,9 +89,12 @@ export default function Shell() {
         </Link>
         <div className="topbar-actions">
           <NotificationBell />
-        <button type="button" className="theme-btn" style={{ width: 'auto' }} onClick={cycle} aria-label={`Theme: ${theme}. Change theme`}>
-          <Icon as={THEME_GLYPH[theme]} size={18} />
-        </button>
+          <button type="button" className="theme-btn" style={{ width: 'auto' }} onClick={cycle} aria-label={`Theme: ${theme}. Change theme`}>
+            <Icon as={THEME_GLYPH[theme]} size={18} />
+          </button>
+          <button type="button" className="theme-btn" style={{ width: 'auto' }} onClick={signOut} aria-label="Log out">
+            <Icon as={LogOut} size={18} />
+          </button>
         </div>
       </header>
 
@@ -95,11 +106,39 @@ export default function Shell() {
           <NotificationBell />
         </div>
         <Links size={18} />
+        <button type="button" className="theme-btn" onClick={() => setPalette(true)} aria-label="Search and commands">
+          <Icon as={Search} size={18} />
+          <span className="label">Search</span>
+          <kbd className="kbd label">Ctrl K</kbd>
+        </button>
         <div className="sidebar-foot">
+          <button type="button" className="theme-btn" onClick={() => setHelp(true)} aria-label="Keyboard shortcuts">
+            <Icon as={CircleHelp} size={18} />
+            <span className="label">Shortcuts</span>
+          </button>
+          <Link to="/about" className="theme-btn">
+            <Icon as={Info} size={18} />
+            <span className="label">About</span>
+          </Link>
+          <Link to="/contact" className="theme-btn">
+            <Icon as={Mail} size={18} />
+            <span className="label">Contact</span>
+          </Link>
           <button type="button" className="theme-btn" onClick={cycle} aria-label={`Theme: ${theme}. Change theme`}>
             <Icon as={THEME_GLYPH[theme]} size={18} />
             <span className="label">Theme: {theme}</span>
           </button>
+          <button type="button" className="theme-btn" onClick={signOut} aria-label="Log out">
+            <Icon as={LogOut} size={18} />
+            <span className="label">Log out</span>
+          </button>
+          <Link to="/profile" className="user-chip" aria-label={`${user.name}, profile`}>
+            <Avatar user={user} size={28} />
+            <span className="label user-chip-text">
+              <span className="user-chip-name">{user.name}</span>
+              <span className="mono user-chip-sub">@{user.username}</span>
+            </span>
+          </Link>
         </div>
       </nav>
 
